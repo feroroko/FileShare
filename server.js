@@ -30,6 +30,8 @@ app.use(function (request, result, next) {
     next();
 });
 
+let database;
+
 http.listen(3000, function () {
     console.log("server started at " + mainURL);
 
