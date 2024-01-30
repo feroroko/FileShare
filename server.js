@@ -1,13 +1,15 @@
 let express = require("express");
 let app = express();
-let htppObj = require("http");
-let htpp = htppObj.createServer(app);
+let httpObj = require("http");
+let http = httpObj.createServer(app);
 
-let mainURL ="http://localhost:3000";
+let mainURL = "http://localhost:3000";
  
-let mongodb = require("mongodb")
+let mongodb = require("mongodb");
 let mongoClient = mongodb.MongoClient;
 let ObjectId = mongodb.ObjectId;
+
+app.set("view engine", "ejs");
 
 app.use("/public/css", express.static(__dirname + "/public/css"));
 app.use("/public/js", express.static(__dirname + "/public/js"));
@@ -15,25 +17,24 @@ app.use("/public/font-awsome-4.7.0", express.static(__dirname + "/public/font-aw
 
 let session = require("express-session");
 app.use(session({
-    secret: "secret key", 
+    secret: "secret key",
     resave: false,
     saveUninitialized: false
 }));
 
-app.use(function (request, result, next ) {
+app.use(function (request, result, next) {
     request.mainURL = mainURL;
-    request.mainURL = (typeof request.session.user !== "undefined");
+    request.isLogin = (typeof request.session.user !== "undefined");
     request.user = request.session.user;
 
     next();
 });
 
-htpp.listen(3000, function () {
-    console.log("server started at" + mainURL );
+http.listen(3000, function () {
+    console.log("server started at " + mainURL);
 
     mongoClient.connect("mongodb://localhost:27017", {
     }, function(error, client) {
-
         database = client.db("FileShare");
         console.log("Database connected");
 
