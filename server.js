@@ -1,9 +1,10 @@
 let express = require("express");
 let app = express();
-let htpp = htpp0bj.createServer(app);
+let htppObj = require("http");
+let htpp = htppObj.createServer(app);
 
 let mainURL ="http://localhost:3000";
-
+ 
 let mongodb = require("mongodb")
 let mongoClient = mongodb.MongoClient;
 let ObjectId = mongodb.ObjectId;
@@ -30,11 +31,10 @@ app.use(function (request, result, next ) {
 htpp.listen(3000, function () {
     console.log("server started at" + mainURL );
 
-    mongoClient.connect("mongodb://localhost:", {
-        useUnifiedTopology: true
+    mongoClient.connect("mongodb://localhost:27017", {
     }, function(error, client) {
 
-        database = client.db("file_share");
+        database = client.db("FileShare");
         console.log("Database connected");
 
         app.get("/", function (request, result) {
