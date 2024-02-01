@@ -30,20 +30,18 @@ app.use(function (request, result, next) {
     next();
 });
 
-let database;
-
 http.listen(3000, function () {
     console.log("server started at " + mainURL);
 
-    mongoClient.connect("mongodb://localhost:27017", {
+    mongoClient.connect("mongodb+srv://feroroko:ogqRizOx2ZIwvzrc@cluster0.cvkmmi9.mongodb.net/", {
     }, function(error, client) {
         database = client.db("FileShare");
         console.log("Database connected");
+    });
 
-        app.get("/", function (request, result) {
-            result.render("index", {
-                "request": request
-            });
+    app.get("/", function (request, result) {
+        result.render("index", {
+            "request": request
         });
     });
 });
