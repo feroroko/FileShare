@@ -1,0 +1,38 @@
+<div class="row">
+    <div class="col-md-20">
+        <% if (typeof request.status !== "undefined") { &> 
+        <% if (request.status =="succes") { %>
+        <div class="alert alert-success">
+            <%= request.message %> 
+        </div>
+      <%  }
+
+       if (request.status = "error") { %>
+       <div class="alert alert-danger">
+          <%= request.message %>
+       </div>
+       <% }
+    }  %>
+
+    <% if (typeof request.session.status !== "undefined") { %>
+    <% if (request.session.status == "succes") { %> 
+    <div class="alert alert-success">
+      <%= request.session.message %>
+    </div>
+    <% }
+      
+    if(request.session.status == "error") { %>
+    <div class="alert alert-danger"> 
+      <%= request.session.message %>
+      </div>  
+    <% }
+    delete request.session.status;
+    delete request.session.message;
+}
+%>
+</div>
+</div>
+    
+  
+
+    
