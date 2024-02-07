@@ -114,14 +114,14 @@ http.listen(3000, async function () {
                 request.status = "success";
                 request.message = "Signed up successfully. An email has been sent to verify your account. Once verified, you can log in and start using ShareFile.";
 
-                result.render("/register", {
+                result.render("register", {
                     "request": request
                 });
             } else {
                 request.status = "error";
                 request.message = "Email already exists.";
 
-                result.render("/Register", {
+                result.render("Register", {
                     "request": request
                 });
             }
