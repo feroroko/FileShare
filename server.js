@@ -10,7 +10,7 @@ let mongoClient = mongodb.MongoClient;
 let ObjectId = mongodb.ObjectId;
 const path = require('path');
 
-app.set("view engine", "ejs");  // Set the view engine to EJS
+app.set("view engine", "ejs");  
 
 app.use("/public/css", express.static(__dirname + "/public/css"));
 app.use("/public/js", express.static(__dirname + "/public/js"));
@@ -25,7 +25,7 @@ app.use(session({
 
 app.use(function (request, result, next) {
     request.mainURL = mainURL;
-    request.isLoggedIn = !!request.session.user; // Simplified isLoggedIn check
+    request.isLoggedIn = !!request.session.user; 
     request.user = request.session.user;
 
     next();
@@ -37,14 +37,14 @@ app.use(formidable());
 let bcrypt = require("bcrypt");
 let nodemailer = require("nodemailer");
 
-let nodemailerFrom = "feroroko@gmail.com";
+let nodemailerFrom = "rokofero@gmail.com";
 let nodemailerObject = {
     service: "gmail",
     host: "smtp.gmail.com",
     port: 465,
     secure: true,
     auth: {
-        user: "feroroko@gmail.com",
+        user: "rokofero@gmail.com",
         pass: ""
     }
 };
@@ -100,8 +100,7 @@ http.listen(3000, async function () {
                 let text = "Please verify your account by clicking the following link: " +
                     mainURL + "/verifyEmail/" + email + "/" + verification_token;
 
-                let html = `Please verify your account by clicking the following link: <br><br>
-                            <a href='${mainURL}/verifyEmail/${email}/${verification_token}'>Confirm Email</a><br><br> Thank you.`;
+                let html = "Please verify your account by clicking the following link: <br><br> <a href='" + mainURL + "/verifyEmail/" + email + "/" + verification_token + "'>Confirm Email</a> < br><br> Thank you.";
 
                 await transporter.sendMail({
                     from: nodemailerFrom,
