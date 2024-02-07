@@ -4,7 +4,7 @@ let httpObj = require("http");
 let http = httpObj.createServer(app);
 
 let mainURL = "http://localhost:3000";
- 
+
 let mongodb = require("mongodb");
 let mongoClient = mongodb.MongoClient;
 let ObjectId = mongodb.ObjectId;
@@ -14,7 +14,7 @@ app.set("view engine", "ejs");  // Set the view engine to EJS
 
 app.use("/public/css", express.static(__dirname + "/public/css"));
 app.use("/public/js", express.static(__dirname + "/public/js"));
-app.use("/public/font-awesome-4.7.0", express.static(__dirname + "/public/font-awesome-4.7.0"));
+app.use("/public/fontawesome-4.7", express.static(__dirname + "/public/fontawesome-4.7"));
 
 let session = require("express-session");
 app.use(session({
@@ -25,28 +25,108 @@ app.use(session({
 
 app.use(function (request, result, next) {
     request.mainURL = mainURL;
-    request.isLoggedIn = (typeof request.session.user !== "undefined");
+    request.isLoggedIn = !!request.session.user; // Simplified isLoggedIn check
     request.user = request.session.user;
 
     next();
 });
 
-http.listen(3000, function () {
+let formidable = require("express-formidable");
+app.use(formidable());
+
+let bcrypt = require("bcrypt");
+let nodemailer = require("nodemailer");
+
+let nodemailerFrom = "feroroko@gmail.com";
+let nodemailerObject = {
+    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+        user: "feroroko@gmail.com",
+        pass: ""
+    }
+};
+
+http.listen(3000, async function () {
     console.log("Server started at " + mainURL);
-    mongoClient.connect("mongodb+srv://feroroko:k5lhCGdv5VTLmj9B@cluster0.cvkmmi9.mongodb.net/", {}, function (error, client) {
-        database = client.db("FileShare");
+
+    try {
+        let client = await mongoClient.connect("mongodb+srv://feroroko:k5lhCGdv5VTLmj9B@cluster0.cvkmmi9.mongodb.net/");
+        let database = client.db("FileShare");
         console.log("Database connected");
-    });
-    
-    app.get("/", function (request, result) {
-        result.render("index", {
-            "request": request
+
+        app.get("/", function (request, result) {
+            result.render("index", {
+                "request": request
+            });
         });
-    });
-    
-    app.get("/Register", function (request, result) {
-        result.render("Register", {
-            "request": request
+
+        app.get("/Register", function (request, result) {
+            result.render("Register", {
+                "request": request
+            });
         });
-    });
+
+        app.post("/Register", async function (request, result) {
+            let name = request.fields.name;
+            let email = request.fields.email;
+            let password = request.fields.password;
+            let reset_token = "";
+            let isVerified = false;
+            let verification_token = new Date().getTime();
+
+            let user = await database.collection("users").findOne({
+                "email": email
+            });
+
+            if (!user) {
+                let hash = await bcrypt.hash(password, 10);
+
+                await database.collection("users").insertOne({
+                    "name": name,
+                    "email": email,
+                    "password": hash,
+                    "reset_token": reset_token,
+                    "uploaded": [],
+                    "sharedWithMe": [],
+                    "isVerified": isVerified,
+                    "verification_token": verification_token
+                });
+
+                let transporter = nodemailer.createTransport(nodemailerObject);
+
+                let text = "Please verify your account by clicking the following link: " +
+                    mainURL + "/verifyEmail/" + email + "/" + verification_token;
+
+                let html = `Please verify your account by clicking the following link: <br><br>
+                            <a href='${mainURL}/verifyEmail/${email}/${verification_token}'>Confirm Email</a><br><br> Thank you.`;
+
+                await transporter.sendMail({
+                    from: nodemailerFrom,
+                    to: email,
+                    subject: "Email Verification",
+                    text: text,
+                    html: html
+                });
+
+                request.status = "success";
+                request.message = "Signed up successfully. An email has been sent to verify your account. Once verified, you can log in and start using ShareFile.";
+
+                result.render("/register", {
+                    "request": request
+                });
+            } else {
+                request.status = "error";
+                request.message = "Email already exists.";
+
+                result.render("/Register", {
+                    "request": request
+                });
+            }
+        });
+    } catch (error) {
+        console.error("Error connecting to the database:", error);
+    }
 });
