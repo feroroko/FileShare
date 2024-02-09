@@ -178,7 +178,6 @@ http.listen(3000, async function () {
         }
     });
     
-    // Define the "/Login" route outside of the "/verifyEmail/:email/:verification_token" handler
     app.get("/Login", function (request, result) {
         result.render("Login", {
             "request": request,
