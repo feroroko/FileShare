@@ -25,7 +25,7 @@ app.use(session({
 
 app.use(function (request, result, next) {
     request.mainURL = mainURL;
-    request.isLoggedIn = !!request.session.user; 
+    request.isLogin = !!request.session.user; 
     request.user = request.session.user;
 
     next();
@@ -130,93 +130,101 @@ http.listen(3000, async function () {
     }
 
     app.get("/verifyEmail/:email/:verification_token", async function (request, result) {
-        
         let email = request.params.email;
-        let verification_token= request.params.verification_token;
-        
+        let verification_token = request.params.verification_token;
+    
         let user = await database.collection("users").findOne({
-            $and: [{ 
-             "email": email, 
-            },  {
-                "verification_token": parseInt(verification_token)
-            }]
-        });
-
-        if (user == null) {
-            request.status = "error";
-            request.message = "Email does not exists. Or verification link is epired.";
-            result.render("Login", {
-                "request": request
-            });
-        } else {
-            await database.collection("users").findOneAndUpdate( {
-                $and: [{ 
-                "email": email, 
-            }, { 
-               "verification_token": path.parseInt(
-                  verification_token)
-                }]
-            }, {
-                $set: { 
-                    "verification_token": "",
-                    "isVerified": true
-                }
-            });
-
-            request.status = "succes";
-            request.message = "Account has been verified. Please try login.";
-            result.render("Login", {
-                "request": request
-            });
-        }
-
-        app.get("/Login", function (request, result) {
-            result.render("Login", {
-                "request": request
-            }); 
+            $and: [
+                {
+                    "email": email,
+                },
+                {
+                    "verification_token": parseInt(verification_token),
+                },
+            ],
         });
     
-        app.post("/Login", async function (request, result) {
-            let email = request.fields.email;
-            let password = request.fields.password;
-        
-            let user = await database.collection("users").findOne({
-                "email": email
+        if (user == null) {
+            request.status = "error";
+            request.message = "Email does not exist, or verification link is expired.";
+            result.render("Login", {
+                "request": request,
             });
-        
-            if (user == null) {
-                request.status = "error";
-                request.message = "Email does not exist.";
-                result.render("Login", {
-                    "request": request
-                });
-        
-                return false;
-            }
-        
-            bcrypt.compare(password, user.password, function (error, isVerify) {
-                if (isVerify) {
-                    if (user.isVerified) {
-                        request.session.user = user;
-                        result.redirect("/");
-        
-                        return false;
-                    }
-        
-                    request.status = "error";
-                    request.message = "Please verify your email.";
-                    result.render("Login", {
-                        "request": request
-                    });
-        
+        } else {
+            await database.collection("users").findOneAndUpdate(
+                {
+                    $and: [
+                        {
+                            "email": email,
+                        },
+                        {
+                            "verification_token": parseInt(verification_token),
+                        },
+                    ],
+                },
+                {
+                    $set: {
+                        "verification_token": "",
+                        "isVerified": true,
+                    },
+                }
+            );
+    
+            request.status = "success";
+            request.message = "Account has been verified. Please try to login.";
+            result.render("Login", {
+                "request": request,
+            });
+        }
+    });
+    
+    // Define the "/Login" route outside of the "/verifyEmail/:email/:verification_token" handler
+    app.get("/Login", function (request, result) {
+        result.render("Login", {
+            "request": request,
+        });
+    });
+    
+    app.post("/Login", async function (request, result) {
+        let email = request.fields.email;
+        let password = request.fields.password;
+    
+        let user = await database.collection("users").findOne({
+            "email": email,
+        });
+    
+        if (user == null) {
+            request.status = "error";
+            request.message = "Email does not exist.";
+            result.render("Login", {
+                "request": request,
+            });
+    
+            return false;
+        }
+    
+        bcrypt.compare(password, user.password, function (error, isVerify) {
+            if (isVerify) {
+                if (user.isVerified) {
+                    request.session.user = user;
+                    result.redirect("/");
+    
                     return false;
                 }
-        
+    
                 request.status = "error";
-                request.message = "Password is not correct";
+                request.message = "Please verify your email.";
                 result.render("Login", {
-                    "request": request
+                    "request": request,
                 });
+    
+                return false;
+            }
+    
+            request.status = "error";
+            request.message = "Password is not correct";
+            result.render("Login", {
+                "request": request,
             });
         });
     });
