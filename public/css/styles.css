@@ -50,10 +50,6 @@ h1 {
 
 }
 
-.navbar navbar-expand-lg navbar-light gb-light {
-    display: flex;
-    justify-items: center;
-}
 
 .col-md-12 {
     margin: 50px; 
