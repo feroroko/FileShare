@@ -15,6 +15,7 @@ app.set("view engine", "ejs");
 app.use("/public/css", express.static(__dirname + "/public/css"));
 app.use("/public/js", express.static(__dirname + "/public/js"));
 app.use("/public/fontawesome-4.7", express.static(__dirname + "/public/fontawesome-4.7"));
+app.use("/public/images", express.static(__dirname + "/public/images"));
 
 let session = require("express-session");
 app.use(session({

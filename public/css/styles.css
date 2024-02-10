@@ -1,7 +1,75 @@
-.navbar navbar-expand-lg navbar-light gb-light {
+@import url('https://fonts.googleapis.com/css2?family=Aboreto&family=Protest+Riot&family=Qwitcher+Grypen&family=Silkscreen:wght@400;700&display=swap');
 
+
+.gb-light {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    background-color: #141414;
+    padding: 0.5%;
 }
+
+.navbar {
+    width: 100%; 
+    font-size: medium;
+}
+
+.nav-link {
+    font-family: ' sans-serif', sans-serif;
+    font-size: 16px; /* Justera storleken efter behov */
+    font-weight: normal; /* eller bold om du vill ha fet text */
+    /* Eventuella andra stildirektiv, t.ex. färg eller linjehöjd */ 
+    color: rgb(255, 255, 255);
+  }
+
+.navbar-brand {
+    font-family: ' sans-serif', sans-serif;
+    font-size: 16px; /* Justera storleken efter behov */
+    font-weight: normal; /* eller bold om du vill ha fet text */
+    /* Eventuella andra stildirektiv, t.ex. färg eller linjehöjd */ 
+    color: rgb(255, 255, 255);
+}
+
 
 body {
-    background-color: white;
+    background-image: url('');
+    background-size: cover; /* Sätt storleken för att täcka hela fönstret */
+    background-position: center; /* Placera bilden i mitten */
+    background-repeat: no-repeat; /* Undvik upprepning av bilden */
+  }
+  
+h1 {
+  font-family: 'Qwitcher Grypen';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  font-size: 100px;
+  display: flex;
+  justify-content: center;
+
 }
+
+.navbar navbar-expand-lg navbar-light gb-light {
+    display: flex;
+    justify-items: center;
+}
+
+.col-md-12 {
+    margin: 50px; 
+    position: absolute;
+    top: 20%;
+    left: 37%;
+    display: flex;
+    
+    
+  }
+
+  .alert-danger {
+    margin: 50px; 
+}
+
+
+  .form-group {
+    margin-bottom: 15px; 
+  }
