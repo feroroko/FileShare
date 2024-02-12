@@ -268,17 +268,20 @@ http.listen(3000, async function () {
             }
         
             bcrypt.hash(new_password, 10, async function (error, hash) {
-                await database.collection("users").findOneAndUpdate(
-                    { "email": email },
-                    {
-                        $set: {
-                            "reset.token": null, // Use null instead of empty string
-                            "password": hash
-                        }
-                    }
-                );
-        
-                request.status = "success"; // Corrected typo in status
+                await database.collection("users").findOneAndUpdate({ 
+                    $and: [{ 
+                        "email": email,
+                }, {
+                    "reset_token": parseInt(reset_token)
+                }]
+            }, {
+                set: {
+                    "reset_token":"",
+                    "password": hash
+                }    
+            });    
+
+                request.status = "success"; 
                 request.message = "Password has been changed. Please try logging in again";
         
                 result.render("Login", {
