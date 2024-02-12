@@ -49,6 +49,7 @@ let nodemailerObject = {
     }
 };
 
+
 http.listen(3000, async function () {
     console.log("Server started at " + mainURL);
 
@@ -126,6 +127,7 @@ http.listen(3000, async function () {
             }
         });
     } catch (error) {
-        console.error("Error connecting to the database:", error);
+        console.error("Error:", error);
+        
     }
 });
