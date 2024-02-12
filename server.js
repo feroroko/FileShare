@@ -227,5 +227,68 @@ http.listen(3000, async function () {
                 "request": request,
             });
         });
+        
+         app.post("/ResetPassword", async function (request, result) {
+            let email = request.fields.email;
+            let reset_token = parseInt(request.fields.reset_token); // Parse reset_token to integer
+            let new_password = request.fields.new_password;
+            let confirm_password = request.fields.confirm_password; // Corrected typo in variable name
+        
+            if (new_password !== confirm_password) {
+                request.status = "error";
+                request.message = "Passwords do not match";
+        
+                result.render("ResetPassword", {
+                    "request": request,
+                    "email": email,
+                    "reset_token": reset_token
+                });
+        
+                return;
+            }
+        
+            let user = await database.collection("users").findOne({
+                $and: [
+                    { "email": email },
+                    { "reset.token": reset_token }
+                ]
+            });
+        
+            if (user === null) {
+                request.status = "error";
+                request.message = "Email does not exist or recovery link is expired";
+        
+                result.render("ResetPassword", {
+                    "request": request,
+                    "email": email,
+                    "reset_token": reset_token
+                });
+        
+                return;
+            }
+        
+            bcrypt.hash(new_password, 10, async function (error, hash) {
+                await database.collection("users").findOneAndUpdate({ 
+                    $and: [{ 
+                        "email": email,
+                }, {
+                    "reset_token": parseInt(reset_token)
+                }]
+            }, {
+                set: {
+                    "reset_token":"",
+                    "password": hash
+                }    
+            });    
+
+                request.status = "success"; 
+                request.message = "Password has been changed. Please try logging in again";
+        
+                result.render("Login", {
+                    "request": request
+                });
+            });
+        });
     });
-});
+});     
+   
