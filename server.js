@@ -10,7 +10,7 @@ let mongoClient = mongodb.MongoClient;
 let ObjectId = mongodb.ObjectId;
 const path = require('path');
 
-app.set("view engine", "ejs");  
+app.set("view engine", "ejs");
 
 app.use("/public/css", express.static(__dirname + "/public/css"));
 app.use("/public/js", express.static(__dirname + "/public/js"));
@@ -26,7 +26,7 @@ app.use(session({
 
 app.use(function (request, result, next) {
     request.mainURL = mainURL;
-    request.isLogin = !!request.session.user; 
+    request.isLogin = !!request.session.user;
     request.user = request.session.user;
 
     next();
@@ -133,7 +133,7 @@ http.listen(3000, async function () {
     app.get("/verifyEmail/:email/:verification_token", async function (request, result) {
         let email = request.params.email;
         let verification_token = request.params.verification_token;
-    
+
         let user = await database.collection("users").findOne({
             $and: [
                 {
@@ -144,7 +144,7 @@ http.listen(3000, async function () {
                 },
             ],
         });
-    
+
         if (user == null) {
             request.status = "error";
             request.message = "Email does not exist, or verification link is expired.";
@@ -170,7 +170,7 @@ http.listen(3000, async function () {
                     },
                 }
             );
-    
+
             request.status = "success";
             request.message = "Account has been verified. Please try to login.";
             result.render("Login", {
@@ -178,118 +178,116 @@ http.listen(3000, async function () {
             });
         }
     });
-    
+
     app.get("/Login", function (request, result) {
         result.render("Login", {
             "request": request,
         });
     });
-    
+
     app.post("/Login", async function (request, result) {
         let email = request.fields.email;
         let password = request.fields.password;
-    
+
         let user = await database.collection("users").findOne({
             "email": email,
         });
-    
+
         if (user == null) {
             request.status = "error";
             request.message = "Email does not exist.";
             result.render("Login", {
                 "request": request,
             });
-    
+
             return false;
         }
-    
+
         bcrypt.compare(password, user.password, function (error, isVerify) {
             if (isVerify) {
                 if (user.isVerified) {
                     request.session.user = user;
                     result.redirect("/");
-    
+
                     return false;
                 }
-    
+
                 request.status = "error";
                 request.message = "Please verify your email.";
                 result.render("Login", {
                     "request": request,
                 });
-    
+
                 return false;
             }
-    
+
             request.status = "error";
             request.message = "Password is not correct";
             result.render("Login", {
                 "request": request,
             });
         });
-        
-        app.post("/ResetPassword", async function (request, result) {
 
+        app.post("ResetPassword", async function (request, result) {
             let email = request.fields.email;
-            let reset_token = parseInt(request.fields.reset_token); 
+            let reset_token = request.fields.reset_token;
             let new_password = request.fields.new_password;
-            let confirm_password = request.fields.confirm_password; 
-        
-            if (new_password !== confirm_password) {
-                request.status = "error";
-                request.message = "Passwords do not match";
-        
+            let confirm_password = request.files.Confirm_password;
+
+            if (new_password != confirm_password) {
+
                 result.render("ResetPassword", {
                     "request": request,
                     "email": email,
                     "reset_token": reset_token
                 });
-        
-                return;
+
+                return false;
+
             }
-        
+
             let user = await database.collection("users").findOne({
-                $and: [
-                    { "email": email },
-                    { "reset.token": reset_token }
-                ]
-            });
-        
-            if (user === null) {
-                request.status = "error";
-                request.message = "Email does not exist or recovery link is expired";
-        
-                result.render("ResetPassword", {
-                    "request": request,
+                $and: [{
                     "email": email,
-                    "reset_token": reset_token
-                });
-        
-                return;
-            }
-        
-            bcrypt.hash(new_password, 10, async function (error, hash) {
-                await database.collection("users").findOneAndUpdate({ 
-                    $and: [{ 
-                        "email": email,
                 }, {
                     "reset_token": parseInt(reset_token)
                 }]
-            }, {
-                set: {
-                    "reset_token":"",
-                    "password": hash
-                }    
-            });    
+            });
 
-                request.status = "success"; 
-                request.message = "Password has been changed. Please try logging in again";
-        
+            if (user == null) {
+                request.status = "error";
+                request.message = "Email does not exist. Or recovery link is expired.";
+
+                result.render("ResetPassword", {
+                    "request": request,
+                    "email": email,
+                    "reset_token": reset_token
+                });
+
+                return false;
+            }
+
+            bcrypt.hash(new_password, 10, async function (error, hash) {
+                await database.collection("users"), findOneAndUpdate({
+                    $and: [{
+                        "email": email,
+                    }, {
+                        "reset_token": parseInt(reset_token)
+                    }]
+                }, {
+                    $set: {
+                        "reset_token": "",
+                        "password": hash
+                    }
+                });
+
+                request.status = "succes";
+                request.message = "Password has been changed. Please try Login Again.";
+
                 result.render("Login", {
                     "request": request
                 });
-            });
+            })
         });
     });
-});     
-   
+});
