@@ -227,12 +227,17 @@ http.listen(3000, async function () {
                 "request": request,
             });
         });
+<<<<<<< HEAD
         
          app.post("/ResetPassword", async function (request, result) {
+=======
+
+        app.post("/ResetPassword", async function (request, result) {
+>>>>>>> 3a8f9459aaf373b8667cbb0be8e4d4f96ffef590
             let email = request.fields.email;
-            let reset_token = parseInt(request.fields.reset_token); // Parse reset_token to integer
+            let reset_token = parseInt(request.fields.reset_token); 
             let new_password = request.fields.new_password;
-            let confirm_password = request.fields.confirm_password; // Corrected typo in variable name
+            let confirm_password = request.fields.confirm_password; 
         
             if (new_password !== confirm_password) {
                 request.status = "error";
@@ -290,5 +295,9 @@ http.listen(3000, async function () {
             });
         });
     });
+<<<<<<< HEAD
 });     
    
+=======
+});     
+>>>>>>> 3a8f9459aaf373b8667cbb0be8e4d4f96ffef590
