@@ -2,6 +2,7 @@ let express = require("express");
 let app = express();
 let httpObj = require("http");
 let http = httpObj.createServer(app);
+const WebSocket = require('ws');
 
 let mainURL = "http://localhost:3000";
 
@@ -39,15 +40,18 @@ app.use(formidable());
 
 let bcrypt = require("bcrypt");
 let nodemailer = require("nodemailer");
+const { render } = require("ejs");
+const { get, data } = require("jquery");
+const { futimes } = require("fs");
 
-let nodemailerFrom = "feroroko@gmail.com";
+let nodemailerFrom = "rokofero@gmail.com";
 let nodemailerObject = {
     service: "gmail",
     host: "smtp.gmail.com",
     port: 465,
     secure: true,
     auth: {
-        user: "rokofero@gmail.com",
+        user: "feroroko@gmail.com",
         pass: "Mm00028444"
     }
 };
@@ -92,6 +96,8 @@ function getUpdatedArray(arr, _id, uploadedOnj) {
             }
         }
     }
+
+    return arr;
 }
 
 http.listen(3000, async function () {
@@ -263,7 +269,7 @@ http.listen(3000, async function () {
             let reset_token = "";
             let isVerified = false;
             let verification_token = new Date().getTime();
-        
+
             let user = await database.collection("users").findOne({
                 "email": email
             });
@@ -293,7 +299,7 @@ http.listen(3000, async function () {
                         let text = "Please verify your account by clicking the following link: " +
                             mainURL + "/verifyEmail/" + email + "/" + verification_token;
 
-                        let html = "Please verify your account by clicking the following link: <br><br> <a href='" + mainURL + "/verifyEmail/" + email + "/" + verification_token + "'>Confirm Email</a><br><br> Thank you.";
+                        let html = "Please verify your account by clicking the following link: <br><br> <a href='" + mainURL + "/verifyEmail/" + email + "/" + verification_token + "'>Confirm Email</a> < br><br> Thank you.";
 
                         await transporter.sendMail({
                             from: nodemailerFrom,
@@ -303,12 +309,13 @@ http.listen(3000, async function () {
                             html: html
                         }, function (error, info) {
                             if (error) {
-                                console.error("Error sending email:", error);
+                                console.error(error);
                             } else {
-                                console.log("Email sent: " + info.response);
+                                console.log("Email sent: " + info.
+                                response);
                             }    
                             
-                            request.status = "success";
+                            request.status = "succes";
                             request.message = "Signed up successfully. An email has been sent to verify your account. Once verified, you can log in and start using ShareFile.";
 
                             result.render("Register", {
@@ -470,7 +477,7 @@ http.listen(3000, async function () {
             }
 
             bcrypt.hash(new_password, 10, async function (error, hash) {
-                await database.collection("users").findOneAndUpdate({
+                await database.collection("users"), findOneAndUpdate({
                     $and: [{
                         "email": email,
                     }, {
