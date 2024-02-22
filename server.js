@@ -40,9 +40,6 @@ app.use(formidable());
 
 let bcrypt = require("bcrypt");
 let nodemailer = require("nodemailer");
-const { render } = require("ejs");
-const { get, data } = require("jquery");
-const { futimes } = require("fs");
 
 let nodemailerFrom = "rokofero@gmail.com";
 let nodemailerObject = {
@@ -52,7 +49,7 @@ let nodemailerObject = {
     secure: true,
     auth: {
         user: "feroroko@gmail.com",
-        pass: "Mm00028444"
+        pass: "vntmtepgkwrjejya"
     }
 };
 
@@ -102,8 +99,6 @@ function getUpdatedArray(arr, _id, uploadedOnj) {
 
 http.listen(3000, async function () {
     console.log("Server started at " + mainURL);
-
-    try {
         let client = await mongoClient.connect("mongodb+srv://feroroko:3KR1Qp9bYxjF5tGN@cluster0.cvkmmi9.mongodb.net/");
         let database = client.db("FileShare");
         console.log("Database connected");
@@ -255,33 +250,31 @@ http.listen(3000, async function () {
             });
         });
 
-        app.get("/Register", function (request, result) {
-            result.render("Register", {
-                "request": request
+        app.get("/Register", function (req, res) {
+            res.render("Register", {
+                request: req // Make sure to pass the correct variable containing your data
             });
         });
+        
 
         app.post("/Register", async function (request, result) {
-            
-            let name = request.fields.name;
-            let email = request.fields.email;
-            let password = request.fields.password;
-            let reset_token = "";
-            let isVerified = false;
-            let verification_token = new Date().getTime();
-
-            let user = await database.collection("users").findOne({
-                "email": email
-            });
-
-            if (user == null) {
-                bcrypt.hash(password, 10, async function (error, hash){
-                    if (error) {
-                        console.error("Error hashing password:", error);
-                        // Handle the error, possibly by sending an error response to the user
-                        return;
-                    }
-
+            try {
+                let name = request.fields.name;
+                let email = request.fields.email;
+                let password = request.fields.password;
+                let reset_token = "";
+                let isVerified = false;
+                let verification_token = new Date().getTime();
+                
+                console.log("Debug: Extracted email from request.fields:", email);
+        
+                let user = await database.collection("users").findOne({
+                    "email": email
+                });
+        
+                if (user === null) {
+                    let hash = await bcrypt.hash(password, 10);
+        
                     await database.collection("users").insertOne({
                         "name": name,
                         "email": email,
@@ -291,53 +284,45 @@ http.listen(3000, async function () {
                         "sharedWithMe": [],
                         "isVerified": isVerified,
                         "verification_token": verification_token
-                    }, async function (error, data) {
-
-                        let transporter = nodemailer.createTransport(
-                            nodemailerObject);
-
-                        let text = "Please verify your account by clicking the following link: " +
-                            mainURL + "/verifyEmail/" + email + "/" + verification_token;
-
-                        let html = "Please verify your account by clicking the following link: <br><br> <a href='" + mainURL + "/verifyEmail/" + email + "/" + verification_token + "'>Confirm Email</a> < br><br> Thank you.";
-
-                        await transporter.sendMail({
+                    });
+        
+                    let transporter = nodemailer.createTransport(nodemailerObject);
+        
+                    let text = "Please verify your account by clicking the following link: " +
+                        mainURL + "/verifyEmail/" + email + "/" + verification_token;
+        
+                    let html = "Please verify your account by clicking the following link: <br><br> <a href='" + mainURL + "/verifyEmail/" + email + "/" + verification_token + "'>Confirm Email</a> < br><br> Thank you.";
+        
+                    if (email) {
+                        let info = await transporter.sendMail({
                             from: nodemailerFrom,
                             to: email,
                             subject: "Email Verification",
                             text: text,
                             html: html
-                        }, function (error, info) {
-                            if (error) {
-                                console.error(error);
-                            } else {
-                                console.log("Email sent: " + info.
-                                response);
-                            }    
-                            
-                            request.status = "succes";
-                            request.message = "Signed up successfully. An email has been sent to verify your account. Once verified, you can log in and start using ShareFile.";
-
-                            result.render("Register", {
-                                "request": request
-                            });
                         });
+        
+                        console.log("Email sent: " + info.response);
+        
+                        result.status(200).render("Register", {
+                            status: "success",
+                            message: "Signed up successfully. An email has been sent to verify your account. Once verified, you can log in and start using ShareFile."
+                        });
+                    } else {
+                        console.error("Recipient email not defined");
+                        result.status(500).send("Internal Server Error");
+                    }
+                } else {
+                    result.status(200).render("Register", {
+                        status: "error",
+                        message: "Email already exists"
                     });
-                });   
-            } else {
-                request.status = "error";
-                request.message ="Email already exist";
-
-                result.render("Register", {
-                    "request": request
-                });
-            }   
-
-        });
-
-    } catch (error) {
-        console.error("Error connecting to the database:", error);
-    }
+                }
+            } catch (error) {
+                console.error("Error in user registration:", error);
+                result.status(500).send("Internal Server Error");
+            }
+        });        
       
     app.get("/verifyEmail/:email/:verification_token", async function (request, result) {
         let email = request.params.email;
