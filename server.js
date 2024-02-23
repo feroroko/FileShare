@@ -191,57 +191,53 @@ http.listen(3000, async function () {
             }
         });
 
+        const { ObjectId } = require('mongodb');
+
         app.get("/MyUploads/:_id?", async function (request, result) {
             const _id = request.params._id;
             if (request.session.user) {
-
-                let user = await database.collection("users").findOne({
-                    "_id": ObjectId(request.session.user._id)
-                });
-
-                let uploaded = null;
-                let folderName = "";
-                let createdAt = "";
-                if (typeof _id == "undefined") {
-                    uploaded = user.uploaded;
-                } else {
-                    let folderObj = await recursiveGetFolder(user.
-                        uploaded, _id);
-
-                    if (folderObj == null) {
-                        request.status = "error";
-                        request.message = "Folder not found.";
-                        result.render("MyUploads", {
-                            "request": request
-                        });
-                        return false;
-                    }
-
-                    uploaded = folderObj.files;
-                    folderName = folderObj.folderName;
-                    createdAt = folderObj.createdAt;
-                }
-
-                if (uploaded == null) {
-                    request.status = "error";
-                    request.message = "Directory not found.";
-                    result.render("MyUploads", {
-                        "request": request
+                try {
+                    let user = await database.collection("users").findOne({
+                        "_id": ObjectId(request.session.user._id)
                     });
-                    return false;
+        
+                    let uploaded = null;
+                    let folderName = "";
+                    let createdAt = "";
+                    if (typeof _id == "undefined") {
+                        uploaded = user.uploaded;
+                    } else {
+                        let folderObj = await recursiveGetFolder(user.uploaded, _id);
+        
+                        if (folderObj == null) {
+                            // Handle folder not found
+                            return result.status(404).send("Folder not found.");
+                        }
+        
+                        uploaded = folderObj.files;
+                        folderName = folderObj.folderName;
+                        createdAt = folderObj.createdAt;
+                    }
+        
+                    if (uploaded == null) {
+                        // Handle directory not found
+                        return result.status(404).send("Directory not found.");
+                    }
+        
+                    return result.render("MyUploads", {
+                        "request": request,
+                        "uploaded": uploaded,
+                        "_id": _id,
+                        "folderName": folderName,
+                        "createdAt": createdAt
+                    });
+                } catch (error) {
+                    console.error("Error fetching user data:", error);
+                    return result.status(500).send("Internal Server Error");
                 }
-
-                result.render("MyUploads", {
-                    "request": request,
-                    "uploaded": uploaded,
-                    "_id": _id,
-                    "folderName": folderName,
-                    "createdAt": createdAt
-                });
-                return false;
             }
-
-            result.redirect("/Login");
+        
+            return result.redirect("/Login");
         });
 
         app.get("/", function (request, result) {
@@ -303,11 +299,14 @@ http.listen(3000, async function () {
                         });
         
                         console.log("Email sent: " + info.response);
-        
-                        result.status(200).render("Register", {
-                            status: "success",
-                            message: "Signed up successfully. An email has been sent to verify your account. Once verified, you can log in and start using ShareFile."
+
+                        request.status = "Success"
+                        request.message = "Signed up successfully. An email has been sent to verify your account. Once verified, you can log in and start using ShareFile."
+
+                        result.render("Register", {
+                            "request": request
                         });
+
                     } else {
                         console.error("Recipient email not defined");
                         result.status(500).send("Internal Server Error");
