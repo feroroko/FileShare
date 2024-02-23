@@ -250,9 +250,9 @@ http.listen(3000, async function () {
             });
         });
 
-        app.get("/Register", function (req, res) {
-            res.render("Register", {
-                request: req // Make sure to pass the correct variable containing your data
+        app.get("/Register", function (request, result) {
+            result.render("Register", {
+                request: request
             });
         });
         
@@ -422,11 +422,70 @@ http.listen(3000, async function () {
             });
         });
 
+        app.get("/ForgotPassword", function (request, result) {
+            result.render("ForgotPassword", {
+                "request": request
+            });
+        });
+        
+        app.post("/SendRecoveryLink", async function (request, result) {
+
+            let email = request.fields.email;
+            let user = await database.collection("users").findOne({
+                "email": email
+            });
+            
+            if (user == null) {
+                request.status = "error";
+                request.message = "Email does not exist";
+
+                result.render("ForgotPassword", {
+                    "request": request
+                });
+                return false;
+            }
+
+            let reset_token = new Date().getTime();
+
+            await database.collection("users").findOneAndUpdate({
+                "email": email
+            }, {
+                $set: {
+                    "reset_token": reset_token
+                }  
+            });
+
+            let transporter = nodemailer.createTransport(
+                nodemailerObject);
+            
+            let text = "Please click the following link to reset your password: " + mainURL + "/ResetPassword/" + email + "/" + reset_token;
+
+            let html = "Please click the following link to reset your password: <br><br> <a href='" + mainURL + "/ResetPassword/" + email + "/" + reset_token + "'>ResetPassword</a> <br><br> Thank you.";
+
+            transporter.sendMail({
+                from: nodemailerFrom,
+                to: email,
+                subject: "Reset Password",
+                text: text,
+                html: html,
+            }, function(error, info){
+                if (error) {
+                    console.error(error);
+                } else {
+                    console.log("Email sent: " + info.response);
+                }
+                
+                result.render("ForgotPassword", {
+                    "request": request
+                });
+            });
+        });
+
         app.post("/ResetPassword", async function (request, result) {
             let email = request.fields.email;
             let reset_token = request.fields.reset_token;
             let new_password = request.fields.new_password;
-            let confirm_password = request.files.Confirm_password;
+            let confirm_password = request.fields.Confirm_password;
 
             if (new_password != confirm_password) {
 
@@ -462,7 +521,7 @@ http.listen(3000, async function () {
             }
 
             bcrypt.hash(new_password, 10, async function (error, hash) {
-                await database.collection("users"), findOneAndUpdate({
+                await database.collection("users").findOneAndUpdate({
                     $and: [{
                         "email": email,
                     }, {
@@ -475,7 +534,7 @@ http.listen(3000, async function () {
                     }
                 });
 
-                request.status = "succes";
+                request.status = "success";
                 request.message = "Password has been changed. Please try Login Again.";
 
                 result.render("Login", {
