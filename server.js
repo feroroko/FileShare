@@ -2,17 +2,14 @@ let express = require("express");
 let app = express();
 let httpObj = require("http");
 let http = httpObj.createServer(app);
-const WebSocket = require('ws');
 
 let mainURL = "http://localhost:3000";
 
 let mongodb = require("mongodb");
 let mongoClient = mongodb.MongoClient;
 let ObjectId = mongodb.ObjectId;
-const path = require('path');
 
 app.set("view engine", "ejs");
-const fileSystem = require("fs");
 
 app.use("/public/css", express.static(__dirname + "/public/css"));
 app.use("/public/js", express.static(__dirname + "/public/js"));
@@ -53,6 +50,8 @@ let nodemailerObject = {
     }
 };
 
+let fileSystem = require("fs");
+
 // recursive function to get the forlder from uploaded
 function recursiveGetFolder(files, _id) {
     let singleFile = null;
@@ -79,17 +78,17 @@ function recursiveGetFolder(files, _id) {
 }
 
 // funcion för att lägga till en ny uppladdad objecjt och exportera den uppdaderade array:en
-function getUpdatedArray(arr, _id, uploadedOnj) {
+function getUpdatedArray(arr, _id, uploadedObj) {
     for (let a = 0; a < arr.length; a++) {
         //
         if (arr[a].type == "folder") {
             if (arr[a]._id == _id) {
-                arr[a]._id = ObjectId(arr[a]._id);
+                arr[a]._id = new ObjectId(arr[a]._id);
             }
             // om den innehåller filer genomför recursion
             if (arr[a].files.length > 0) {
-                arr[a]._id = ObjectId(arr[a]._id);
-                getUpdatedArray(arr[a].files, _id, uploadedOnj);
+                arr[a]._id = new ObjectId(arr[a]._id);
+                getUpdatedArray(arr[a].files, _id, uploadedObj);
             }
         }
     }
@@ -111,11 +110,11 @@ http.listen(3000, async function () {
             if (request.session.user) {
 
                 let user = await database.collection("users").findOne({
-                    "_id": ObjectId(request.session.user._id)
+                    "_id": new ObjectId(request.session.user._id)
                 });
 
-                let uploadedOnj = {
-                    ":_id": ObjectId(),
+                let uploadedObj = {
+                    ":_id": new ObjectId(),
                     "type": "folder",
                     "folderName": name,
                     "files": [],
@@ -128,7 +127,7 @@ http.listen(3000, async function () {
                 if (_id == "") {
                     folderPath = "public/uploads/" + user.email + "/" +
                         name;
-                    uploadedOnj.folderPath = folderPath;
+                    uploadedObj.folderPath = folderPath;
 
                     if (!fileSystem.existsSync("public/uploads/" + user.
                         email)) {
@@ -138,45 +137,45 @@ http.listen(3000, async function () {
                 } else {
                     let folderObj = await recursiveGetFolder(user.
                         uploaded, _id);
-                    uploadedOnj.folderPath = folderObj.folderPath + "/"
+                    uploadedObj.folderPath = folderObj.folderPath + "/"
                         + name;
                     updatedArray = await getUpdatedArray(user.uploaded,
-                        _id, uploadedOnj);
+                        _id, uploadedObj);
                 }
 
-                if (uploadedOnj.folderPath == "") {
+                if (uploadedObj.folderPath == "") {
                     request.session.status = "error"
                     request.session.message = "Folder name must not be emty.";
                     result.redirect("/MyUploads");
                     return false;
                 }
 
-                if (fileSystem.existsSync(uploadedOnj.folderPath)) {
+                if (fileSystem.existsSync(uploadedObj.folderPath)) {
                     request.session.status = "error";
                     request.session.message = "Folder with same name already exist";
                     result.redirect("/MyUploads");
                     return false;
                 }
 
-                fileSystem.mkdirSync(uploadedOnj.folderPath);
+                fileSystem.mkdirSync(uploadedObj.folderPath);
 
                 if (_id == "") {
                     await database.collection("users").updateOne({
-                        "_id": ObjectId(request.session.user._id)
+                        "_id": new ObjectId(request.session.user._id)
                     }, {
                         $push: {
-                            "uploaded": uploadedOnj
+                            "uploaded": uploadedObj
                         }
                     });
                 } else {
 
                     for (let a = 0; a < updatedArray.length; a++) {
-                        updatedArray[a]._id = ObjectId(updatedArray[a].
+                        updatedArray[a]._id = new ObjectId(updatedArray[a].
                             _id);
                     }
 
                     await database.collection("users").updateOne({
-                        "_id": ObjectId(request.session.user._id)
+                        "_id": new ObjectId(request.session.user._id)
                     }, {
                         $set: {
                             "uploaded": updatedArray
@@ -196,7 +195,7 @@ http.listen(3000, async function () {
             if (request.session.user) {
 
                 let user = await database.collection("users").findOne({
-                    "_id": ObjectId(request.session.user._id)   // use "New" ObjectId to make it work, But why? 
+                    "_id": new ObjectId(request.session.user._id)   // use "New" new ObjectId to make it work, But why? 
                 });
 
                 let uploaded = null;

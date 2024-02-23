@@ -30,12 +30,33 @@
             <button type="button" class="btn btn-primary" onclick="onclickCreateFolder();">Create folder</button> 
         </div>
     </div>
+
+    <div class="row">
+        <% 
+        uploaded.forEach(function (singleFile){
+
+            let fileSize = 0;
+            %>
+          <div class="col-md-4" style="margin-top: 30px;">
+            
+            <div class="card">
+                <div class="card-body" style="font-size: 100px;
+                text-align: center; height: 300px;">
+                <% if (singleFile.type == "folder") { %>
+                <i class="fa-folder-open-o"></i>
+                <% } else {
+                <i class="fa fa-folder-open-o"></i>
+                <% } %>
+            </div> // 13:24
+                
+        })
+           
     
 </div>
  
 <form method="POST" action="<%= request.mainURL %>/CreateFolder" id="form-create-folder">
-    <input type="text" name="name" required />
-    <input type="hidden" name="_id" value="<%=_id %>" />
+    <input type="hidden" name="name" required />
+    <input type="hidden" name="_id" value="<%= _id %>" />
 </form>
 
 <script>
