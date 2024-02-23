@@ -103,8 +103,8 @@ http.listen(3000, async function () {
         let database = client.db("FileShare");
         console.log("Database connected");
 
-        app.post("/CreateFolder", async function (request, result) {
-
+        app.post("/CreateFolder", async function (request, result) {           // starts at 7:10 check video tommorow!
+ 
             const name = request.fields.name;
             const _id = request.fields._id;
 
@@ -196,7 +196,7 @@ http.listen(3000, async function () {
             if (request.session.user) {
 
                 let user = await database.collection("users").findOne({
-                    "_id": ObjectId(request.session.user._id)   // use New ObjectId to make it work, But why? 
+                    "_id": ObjectId(request.session.user._id)   // use "New" ObjectId to make it work, But why? 
                 });
 
                 let uploaded = null;
