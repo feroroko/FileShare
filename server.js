@@ -190,54 +190,58 @@ http.listen(3000, async function () {
                 result.redirect("/Login");
             }
         });
-
-        const { ObjectId } = require('mongodb');
-
+        
         app.get("/MyUploads/:_id?", async function (request, result) {
             const _id = request.params._id;
             if (request.session.user) {
-                try {
-                    let user = await database.collection("users").findOne({
-                        "_id": ObjectId(request.session.user._id)
-                    });
-        
-                    let uploaded = null;
-                    let folderName = "";
-                    let createdAt = "";
-                    if (typeof _id == "undefined") {
-                        uploaded = user.uploaded;
-                    } else {
-                        let folderObj = await recursiveGetFolder(user.uploaded, _id);
-        
-                        if (folderObj == null) {
-                            // Handle folder not found
-                            return result.status(404).send("Folder not found.");
-                        }
-        
-                        uploaded = folderObj.files;
-                        folderName = folderObj.folderName;
-                        createdAt = folderObj.createdAt;
+
+                let user = await database.collection("users").findOne({
+                    "_id": ObjectId(request.session.user._id)   // use New ObjectId to make it work, But why? 
+                });
+
+                let uploaded = null;
+                let folderName = "";
+                let createdAt = "";
+                if (typeof _id == "undefined") {
+                    uploaded = user.uploaded;
+                } else {
+                    let folderObj = await recursiveGetFolder(user.
+                        uploaded, _id);
+
+                    if (folderObj == null) {
+                        request.status = "error";
+                        request.message = "Folder not found.";
+                        result.render("MyUploads", {
+                            "request": request
+                        });
+                        return false;
                     }
-        
-                    if (uploaded == null) {
-                        // Handle directory not found
-                        return result.status(404).send("Directory not found.");
-                    }
-        
-                    return result.render("MyUploads", {
-                        "request": request,
-                        "uploaded": uploaded,
-                        "_id": _id,
-                        "folderName": folderName,
-                        "createdAt": createdAt
-                    });
-                } catch (error) {
-                    console.error("Error fetching user data:", error);
-                    return result.status(500).send("Internal Server Error");
+
+                    uploaded = folderObj.files;
+                    folderName = folderObj.folderName;
+                    createdAt = folderObj.createdAt;
                 }
+
+                if (uploaded == null) {
+                    request.status = "error";
+                    request.message = "Directory not found.";
+                    result.render("MyUploads", {
+                        "request": request
+                    });
+                    return false;
+                }
+
+                result.render("MyUploads", {
+                    "request": request,
+                    "uploaded": uploaded,
+                    "_id": _id,
+                    "folderName": folderName,
+                    "createdAt": createdAt
+                });
+                return false;
             }
-        
-            return result.redirect("/Login");
+
+            result.redirect("/Login");
         });
 
         app.get("/", function (request, result) {
