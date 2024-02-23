@@ -266,7 +266,7 @@ http.listen(3000, async function () {
                 let isVerified = false;
                 let verification_token = new Date().getTime();
                 
-                console.log("Debug: Extracted email from request.fields:", email);
+                //console.log("Debug: Extracted email from request.fields:", email);
         
                 let user = await database.collection("users").findOne({
                     "email": email
