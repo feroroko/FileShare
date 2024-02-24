@@ -186,60 +186,53 @@ http.listen(3000, async function () {
                     return false;
                 }
 
-                result.redirect("/Login");
+                result.redirect("/MyUploads");
             }
         });
         
         app.get("/MyUploads/:_id?", async function (request, result) {
             const _id = request.params._id;
+        
             if (request.session.user) {
 
                 let user = await database.collection("users").findOne({
-                    "_id": new ObjectId(request.session.user._id)   // use "New" new ObjectId to make it work, But why? 
+                    "_id": new ObjectId(request.session.user._id)
                 });
-
+        
                 let uploaded = null;
                 let folderName = "";
                 let createdAt = "";
                 if (typeof _id == "undefined") {
                     uploaded = user.uploaded;
                 } else {
-                    let folderObj = await recursiveGetFolder(user.
-                        uploaded, _id);
-
-                    if (folderObj == null) {
+                    let folderObj = await recursiveGetFolder(user.uploaded, _id);
+        
+                    if (!folderObj) {
                         request.status = "error";
                         request.message = "Folder not found.";
-                        result.render("MyUploads", {
-                            "request": request
-                        });
-                        return false;
+                        return result.render("MyUploads", { "request": request });
                     }
-
+        
                     uploaded = folderObj.files;
                     folderName = folderObj.folderName;
                     createdAt = folderObj.createdAt;
                 }
-
-                if (uploaded == null) {
+        
+                if (!uploaded) {
                     request.status = "error";
                     request.message = "Directory not found.";
-                    result.render("MyUploads", {
-                        "request": request
-                    });
-                    return false;
+                    return result.render("MyUploads", { "request": request });
                 }
-
-                result.render("MyUploads", {
+        
+                return result.render("MyUploads", {
                     "request": request,
                     "uploaded": uploaded,
                     "_id": _id,
                     "folderName": folderName,
                     "createdAt": createdAt
                 });
-                return false;
             }
-
+        
             result.redirect("/Login");
         });
 
