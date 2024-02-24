@@ -4,13 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title><%= typeof title == "undefined" ? "Home": title %></title>
-
+    <title><%= typeof title == "undefined" ? "Home" : title %></title>
 
     <link rel="stylesheet" href="/public/css/bootstrap.min.css" />
     <link rel="stylesheet" href="/public/fontawesome-4.7/css/font-awesome.min.css" />
     <link rel="stylesheet" href="/public/css/styles.css" />
-
     
 </head>
 
@@ -27,13 +25,39 @@
     
     months = ["January", "February", "March", "April", "May", "June", 
         "July", "August", "September", "October", "November", "December"];
+
+        formatBytes = function(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        };
+
+        getFolderSize = function(arr){
+            let sum = 0;
+            for (var a = 0; a < arr.length; a++) {
+                if (arr[a].type == "folder") {
+                    if (arr[a].files.length > 0) {
+                        sum += getFolderSize(arr[a].files);
+                    }  
+                } else {
+                    sum += arr[a].size;
+                }    
+            }
+            return sum;
+                
+        };
     %>
 
     <nav class="navbar navbar-expand-lg navbar-light gb-light"> 
         <a class="navbar-brand" href="<%= request.mainURL %>">FileShare
         </a>
-        <div class="collapse navbar-collapse" id="navbarSupportedContent"
-        > 
+        <div class="collapse navbar-collapse" id="navbarSupportedContent"> 
            <ul class="navbar-nav mr-auto">
             <li class="navbar-item active"> 
                 <a class="nav-link" href="<%= request.mainURL %>"> 
