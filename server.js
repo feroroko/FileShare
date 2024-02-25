@@ -7,7 +7,8 @@ let mainURL = "http://localhost:3000";
 
 let mongodb = require("mongodb");
 let mongoClient = mongodb.MongoClient;
-let ObjectId = mongodb.ObjectId;
+const { ObjectId } = require('mongodb');
+
 
 app.set("view engine", "ejs");
 
@@ -53,7 +54,7 @@ let nodemailerObject = {
 let fileSystem = require("fs");
 
 // recursive function to get the forlder from uploaded
-function recursiveGetFolder(files, _id) {
+function recursiveGetFolder (files, _id) {
     let singleFile = null;
 
     for (let a = 0; a < files.length; a++) {
@@ -80,19 +81,16 @@ function recursiveGetFolder(files, _id) {
 // funcion för att lägga till en ny uppladdad objecjt och exportera den uppdaderade array:en
 function getUpdatedArray(arr, _id, uploadedObj) {
     for (let a = 0; a < arr.length; a++) {
-        //
-        if (arr[a].type == "folder") {
-            if (arr[a]._id == _id) {
+        if (arr[a].type === "folder") {
+            if (arr[a]._id.toString() === _id.toString()) {
                 arr[a]._id = new ObjectId(arr[a]._id);
             }
-            // om den innehåller filer genomför recursion
+
             if (arr[a].files.length > 0) {
-                arr[a]._id = new ObjectId(arr[a]._id);
-                getUpdatedArray(arr[a].files, _id, uploadedObj);
+                arr[a].files = getUpdatedArray(arr[a].files, _id, uploadedObj);
             }
         }
     }
-
     return arr;
 }
 
@@ -102,135 +100,161 @@ http.listen(3000, async function () {
         let database = client.db("FileShare");
         console.log("Database connected");
 
-        app.post("/CreateFolder", async function (request, result) {           // starts at 7:10 check video tommorow!
- 
-            const name = request.fields.name;
-            const _id = request.fields._id;
-
-            if (request.session.user) {
-
-                let user = await database.collection("users").findOne({
-                    "_id": new ObjectId(request.session.user._id)
-                });
-
-                let uploadedObj = {
-                    ":_id": new ObjectId(),
-                    "type": "folder",
-                    "folderName": name,
-                    "files": [],
-                    "folderPath": "",
-                    "createdAt": new Date().getTime()
-                };
-
-                let folderPath = "";
-                let updatedArray = [];
-                if (_id == "") {
-                    folderPath = "public/uploads/" + user.email + "/" +
-                        name;
-                    uploadedObj.folderPath = folderPath;
-
-                    if (!fileSystem.existsSync("public/uploads/" + user.
-                        email)) {
-                        fileSystem.mkdirSync("public/uploads/" + user.
-                            email);
-                    }
-                } else {
-                    let folderObj = await recursiveGetFolder(user.
-                        uploaded, _id);
-                    uploadedObj.folderPath = folderObj.folderPath + "/"
-                        + name;
-                    updatedArray = await getUpdatedArray(user.uploaded,
-                        _id, uploadedObj);
-                }
-
-                if (uploadedObj.folderPath == "") {
-                    request.session.status = "error"
-                    request.session.message = "Folder name must not be emty.";
-                    result.redirect("/MyUploads");
-                    return false;
-                }
-
-                if (fileSystem.existsSync(uploadedObj.folderPath)) {
-                    request.session.status = "error";
-                    request.session.message = "Folder with same name already exist";
-                    result.redirect("/MyUploads");
-                    return false;
-                }
-
-                fileSystem.mkdirSync(uploadedObj.folderPath);
-
-                if (_id == "") {
-                    await database.collection("users").updateOne({
-                        "_id": new ObjectId(request.session.user._id)
-                    }, {
-                        $push: {
-                            "uploaded": uploadedObj
+        app.post("/CreateFolder", async function (request, result) {
+            try {
+                // Extract necessary data from request
+                const name = request.fields.name;
+                const _id = request.fields._id;
+        
+                // Check if user is authenticated
+                if (request.session.user) {
+                    const userId = new ObjectId(request.session.user._id);
+                    const user = await database.collection("users").findOne({ "_id": userId });
+        
+                    // Prepare the new folder object
+                    const uploadedObj = {
+                        "_id": new ObjectId(),
+                        "type": "folder",
+                        "folderName": name,
+                        "files": [],
+                        "folderPath": "",
+                        "createdAt": new Date().getTime()
+                    };
+        
+                    let folderPath = "";
+                    let updatedArray = [];
+        
+                    // Check if creating a root-level folder or within an existing folder
+                    if (_id === "") {
+                        folderPath = `public/uploads/${user.email}/${name}`;
+                        uploadedObj.folderPath = folderPath;
+        
+                        // Create user directory if it doesn't exist
+                        if (!fileSystem.existsSync(`public/uploads/${user.email}`)) {
+                            fileSystem.mkdirSync(`public/uploads/${user.email}`);
                         }
-                    });
-                } else {
-
-                    for (let a = 0; a < updatedArray.length; a++) {
-                        updatedArray[a]._id = new ObjectId(updatedArray[a].
-                            _id);
+                    } else {
+                        const folderObj = await recursiveGetFolder(user.uploaded, _id);
+        
+                        // Set the folder path for the new folder
+                        uploadedObj.folderPath = folderObj ? `${folderObj.folderPath}/${name}` : "";
+        
+                        // Update the array with the result of the recursive call
+                        updatedArray = await getUpdatedArray(user.uploaded, _id.toString(), uploadedObj);
                     }
-
-                    await database.collection("users").updateOne({
-                        "_id": new ObjectId(request.session.user._id)
-                    }, {
-                        $set: {
-                            "uploaded": updatedArray
+        
+                    // Check if folder path is empty
+                    if (uploadedObj.folderPath === "") {
+                        request.session.status = "error";
+                        request.session.message = "Folder name must not be empty.";
+                        return result.redirect("/MyUploads");
+                    }
+        
+                    // Check if folder with the same name already exists
+                    if (fileSystem.existsSync(uploadedObj.folderPath)) {
+                        request.session.status = "error";
+                        request.session.message = "Folder with the same name already exists.";
+                        return result.redirect("/MyUploads");
+                    }
+        
+                    // Create the folder on the file system
+                    try {
+                        fileSystem.mkdirSync(uploadedObj.folderPath);
+                    } catch (error) {
+                        if (error.code !== 'EEXIST') {
+                            // Handle unexpected errors
+                            console.error("Error creating folder:", error);
+                            request.session.status = "error";
+                            request.session.message = "Error creating folder.";
+                            return result.redirect("/MyUploads");
                         }
-                    });
-
-                    result.redirect("/MyUploads" + _id);
-                    return false;
+                        // If 'EEXIST', the folder already exists, proceed as planned
+                    }
+        
+                    // Update user's uploaded array based on the operation (create/update)
+                    if (_id === "") {
+                        await database.collection("users").updateOne({ "_id": userId }, {
+                            $push: { "uploaded": uploadedObj }
+                        });
+                    } else {
+                        // Convert ObjectIds in the updatedArray
+                        updatedArray.forEach(item => item._id = new ObjectId(item._id));
+        
+                        await database.collection("users").updateOne({ "_id": userId }, {
+                            $set: { "uploaded": updatedArray }
+                        });
+        
+                        // Redirect to the folder page after successful update
+                        return result.redirect("/MyUploads" + _id);
+                    }
+        
+                    // Redirect to MyUploads page after folder creation
+                    result.redirect("/MyUploads");
                 }
-
+            } catch (error) {
+                // Handle any unexpected errors
+                console.error("Error in /CreateFolder:", error);
+                request.session.status = "error";
+                request.session.message = "Error processing folder creation.";
                 result.redirect("/MyUploads");
             }
         });
+        
         
         app.get("/MyUploads/:_id?", async function (request, result) {
             const _id = request.params._id;
         
             if (request.session.user) {
-
-                let user = await database.collection("users").findOne({
-                    "_id": new ObjectId(request.session.user._id)
-                });
+                try {
+                    let user = await database.collection("users").findOne({
+                        "_id": new ObjectId(request.session.user._id)
+                    });
         
-                let uploaded = null;
-                let folderName = "";
-                let createdAt = "";
-                if (typeof _id == "undefined") {
-                    uploaded = user.uploaded;
-                } else {
-                    let folderObj = await recursiveGetFolder(user.uploaded, _id);
+                    console.log("User Uploaded:", user.uploaded);
         
-                    if (!folderObj) {
-                        request.status = "error";
-                        request.message = "Folder not found.";
-                        return result.render("MyUploads", { "request": request });
+                    let uploaded = null;
+                    let folderName = "";
+                    let createdAt = "";
+        
+                    if (typeof _id === "undefined") {
+                        uploaded = user.uploaded;
+                    } else {
+                        let folderObj = await recursiveGetFolder(user.uploaded, _id);
+        
+                        console.log("Folder Object:", folderObj);
+                        console.log("Folder ID:", _id);
+        
+                        if (folderObj === undefined) {
+                            console.error("Folder not found:", _id);
+                            request.status = "error";
+                            request.message = "Folder not found.";
+                            return result.render("MyUploads", {
+                                "request": request,
+                                "uploaded": [],
+                                "_id": _id,
+                                "folderName": folderName,
+                                "createdAt": createdAt
+                            });
+                        }
+        
+                        folderName = folderObj.folderName || "";
+                        createdAt = folderObj.createdAt || "";
+                        uploaded = folderObj.files || [];
+        
+                        console.log("Folder Name:", folderName);
                     }
         
-                    uploaded = folderObj.files;
-                    folderName = folderObj.folderName;
-                    createdAt = folderObj.createdAt;
+                    return result.render("MyUploads", {
+                        "request": request,
+                        "uploaded": Array.isArray(uploaded) ? uploaded : [],
+                        "_id": _id,
+                        "folderName": folderName,
+                        "createdAt": createdAt
+                    });
+                } catch (error) {
+                    console.error("Error in rendering MyUploads:", error);
+                    result.status(500).send("Internal Server Error");
                 }
-        
-                if (!uploaded) {
-                    request.status = "error";
-                    request.message = "Directory not found.";
-                    return result.render("MyUploads", { "request": request });
-                }
-        
-                return result.render("MyUploads", {
-                    "request": request,
-                    "uploaded": uploaded,
-                    "_id": _id,
-                    "folderName": folderName,
-                    "createdAt": createdAt
-                });
             }
         
             result.redirect("/Login");
@@ -371,6 +395,7 @@ http.listen(3000, async function () {
     app.get("/Login", function (request, result) {
         result.render("Login", {
             "request": request,
+    
         });
     });
 
