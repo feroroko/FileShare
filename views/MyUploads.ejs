@@ -27,9 +27,9 @@
         <% } %>
      
         <div class="col-md-4">
+            <a href="javascript:void(0)" class="btn btn-primary" onclick="selectFileForUpload();">Upload</a>
             <button type="button" class="btn btn-primary" onclick="onclickCreateFolder();">Create folder</button> 
-        </div>
-    </div>
+        </div>        
 
     <div class="row">
         <% if (uploaded && Array.isArray(uploaded)) { %>
@@ -89,7 +89,23 @@
     <input type="hidden" name="_id" value="<%= _id %>" />
 </form>
 
+<form method="post" action="<%= request.mainURL %>/UploadFile" enctype="multipart/form-data" id="form-upload-file">
+    <input type="hidden" name="_id" value="<%= _id %>" />
+    <input type="file" name="file" id="input-file-upload" style="display: none;" onchange="confirmUpload();" required />
+</form>
+
 <script>
+
+    function confirmUpload() {
+        if (confirm ("Upload the selected file to the server?")) {
+            document.getElementById("form-upload-file").submit();
+        } 
+    }
+    
+    function selectFileForUpload() {
+        document.getElementById("input-file-upload").click();
+        }
+
     function onclickCreateFolder() {
         let folderName = prompt("Please enter folder name", "");
 
