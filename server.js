@@ -141,9 +141,7 @@ http.listen(3000, async function () {
 
                                 await database.collection("users").
                                 updateOne({
-                                    "_id": new ObjectId(request.session.user
-                                        ._id)
-
+                                    "_id": new ObjectId(request.session.user._id)
                                 }, {
                                     $push: {
                                         "uploaded": uploadedObj
@@ -174,7 +172,7 @@ http.listen(3000, async function () {
                             console.log('File read!');
 
                             // Write The file
-                            fileSystem.writeFile(uploadedObj.filePath, data, async function (err){
+                            fileSystem.writeFile(filePath, data, async function (err){
                                 if (err) throw err;
                                 console.log('File written');
 
