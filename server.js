@@ -102,117 +102,102 @@ http.listen(3000, async function () {
 
         app.post("/UploadFile", async function (request, result) {
             if (request.session.user) {
-
-                let user = await database.collection("users").findOne({
-                    "_id": new ObjectId(request.session.user._id)
-                });
-
-                if (request.files.file.size > 0) {
-
-                    const _id = request.fields._id;
-
-                    let uploadedObj = {
-                        "_id": new ObjectId(),
-                        "size": request.files.file.size,
-                        "name": request.fields.file.name,
-                        "type": request.files.file.type,
-                        "filePath": "",
-                        "createdAt": new Date().getTime()
-                    };
-
-                    let filePath = "";
-
-                    if (_id == "") {
-                        filePath = "public/uploads/" + user.email + "/" + new Date().getTime() + "-" + request.files.file.name;
-                        uploadedObj.filePath = filePath;
-
-                        if (!fileSystem.existsSync("public/uploads/" + user.email)){
-                            fileSystem.mkdirSync("public/uploads/" + user.email);
+                try {
+                    let user = await database.collection("users").findOne({
+                        "_id": new ObjectId(request.session.user._id)
+                    });
+        
+                    if (request.files.file && request.files.file.size > 0) {
+                        const _id = request.fields._id;
+        
+                        let uploadedObj = {
+                            "_id": new ObjectId(),
+                            "size": request.files.file.size,
+                            "name": request.files.file.name,
+                            "type": request.files.file.type,
+                            "filePath": "",
+                            "createdAt": new Date().getTime()
+                        };
+        
+                        let filePath = "";
+        
+                        if (_id == "") {
+                            // If it is a new upload (not part of a folder)
+                            filePath = "public/uploads/" + user.email + "/" + new Date().getTime() + "-" + request.files.file.name;
+                            uploadedObj.filePath = filePath;
+        
+                            if (!fileSystem.existsSync("public/uploads/" + user.email)){
+                                fileSystem.mkdirSync("public/uploads/" + user.email);
+                            }
+                        } else {
+                            // If it is part of a folder
+                            let folderObj = await recursiveGetFolder(user.uploaded, _id);
+        
+                            if (!folderObj || !folderObj.folderPath) {
+                                console.error("Error: 'folderPath' is empty or undefined.");
+                                throw new Error("Error processing folder path.");
+                            }
+        
+                            filePath = folderObj.folderPath + "/" + request.files.file.name;
+                            uploadedObj.filePath = filePath;
                         }
-
-                        // read file
-                        fileSystem.readFile(request.files.file.path, function (err, data){
+        
+                        // Read file
+                        fileSystem.readFile(request.files.file.path, async function (err, data) {
                             if (err) throw err;
                             console.log('File read!');
-
-                            fileSystem.writeFile(filePath, data, async function (err){
-                                if (err) throw err;
-                                console.log('File written!');
-
-                                await database.collection("users").
-                                updateOne({
+        
+                            // Write the file
+                            await fileSystem.promises.writeFile(filePath, data);
+                            console.log('File written!');
+        
+                            // Update database
+                            if (_id == "") {
+                                await database.collection("users").updateOne({
                                     "_id": new ObjectId(request.session.user._id)
                                 }, {
                                     $push: {
                                         "uploaded": uploadedObj
                                     }
                                 });
-
-                                result.redirect("/MyUploads/" + _id);
-                            });
-
-                            fileSystem.unlink(request.files.file.path, function (err){
-                                if (err) throw err;
-                                console.log('File deleted!');
-                            });
-                        });
-
-                    } else {
-
-                        // if it is a folder
-                        let folderObj = await recursiveGetFolder(user.uploaded, _id);
-
-                        uploadedObj.filePath = folderObj.folderPath + "/" + request.files.file.name;
-
-                        let updatedArray = await getUpdatedArray(user.uploaded, _id, uploadedObj);
-
-                        // read the file
-                        fileSystem.readFile(request.files.file.path, function (err, data) {
-                            if (err) throw err;
-                            console.log('File read!');
-
-                            // Write The file
-                            fileSystem.writeFile(filePath, data, async function (err){
-                                if (err) throw err;
-                                console.log('File written');
-
-                                for (let a = 0; a < updatedArray.length;
-                                     a++) {
-                                    updatedArray[a]._id = new ObjectId(
-                                        updatedArray[a]._id);
-                                }
-
+                            } else {
+                                let updatedArray = await getUpdatedArray(user.uploaded, _id, uploadedObj);
+        
+                                // Update the array in the database
                                 await database.collection("users").updateOne({
                                     "_id": new ObjectId(request.session.user._id)
-
                                 }, {
                                     $set: {
                                         "uploaded": updatedArray
                                     }
                                 });
-                                
-                                result.redirect("/MyUploads/" + _id);
-                            });
-
-                            fileSystem.unlink(request.files.file.path, function (err){
-                                if (err) throw err;
-                                console.log('File deleted!');
+                            }
+        
+                            result.redirect("/MyUploads/" + _id);
+        
+                            // Delete the temporary file
+                            fileSystem.unlink(request.files.file.path, function (err) {
+                                if (err) console.error('Error deleting temporary file:', err);
+                                console.log('Temporary file deleted!');
                             });
                         });
+                    } else {
+                        // No file or invalid file selected
+                        request.status = "error";
+                        request.message = "Please select a valid image.";
+                        result.render("MyUploads", {
+                            "request": request
+                        });
                     }
-                } else {
-                    request.status = "error";
-                    request.message = "Please select valid image.";
-
-                    result.render("MyUploads", {
-                        "request": request
-                    });
+                } catch (error) {
+                    console.error('Error:', error);
+                    result.status(500).send('Internal Server Error');
                 }
-
+        
                 return false;
-
             }
-
+        
+            // User not logged in
             result.redirect("/Login");
         });
 
