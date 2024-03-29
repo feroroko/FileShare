@@ -82,17 +82,21 @@ function recursiveGetFolder (files, _id) {
 function getUpdatedArray(arr, _id, uploadedObj) {
     for (let a = 0; a < arr.length; a++) {
         if (arr[a].type === "folder") {
-            if (arr[a]._id.toString() === _id.toString()) {
+            if (arr[a]._id == _id) {
+                arr[a].files.push(uploadedObj);
                 arr[a]._id = new ObjectId(arr[a]._id);
             }
 
-            if (arr[a].files.length > 0) {
-                arr[a].files = getUpdatedArray(arr[a].files, _id, uploadedObj);
+            if (arr[a].files.length >0 ) {
+                arr[a]._id = new ObjectId(arr[a]._id);
+                getUpdatedArray(arr[a].files, _id, uploadedObj);
             }
-        }
+        }    
     }
+
     return arr;
 }
+           
 
 http.listen(3000, async function () {
     console.log("Server started at " + mainURL);
@@ -226,22 +230,21 @@ http.listen(3000, async function () {
                     let updatedArray = [];
         
                     // Check if creating a root-level folder or within an existing folder
-                    if (_id === "") {
-                        folderPath = `public/uploads/${user.email}/${name}`;
+                    if (_id == "") {
+                        folderPath = "public/uploads/" + user.email + "/" + name;
                         uploadedObj.folderPath = folderPath;
         
                         // Create user directory if it doesn't exist
-                        if (!fileSystem.existsSync(`public/uploads/${user.email}`)) {
-                            fileSystem.mkdirSync(`public/uploads/${user.email}`);
+                        if (!fileSystem.existsSync("public/uploads/" + user.email)) {
+                            fileSystem.mkdirSync("public/uploads/" + user.email);
                         }
                     } else {
-                        const folderObj = await recursiveGetFolder(user.uploaded, _id);
-        
-                        // Set the folder path for the new folder
-                        uploadedObj.folderPath = folderObj ? `${folderObj.folderPath}/${name}` : "";
-        
-                        // Update the array with the result of the recursive call
-                        updatedArray = await getUpdatedArray(user.uploaded, _id.toString(), uploadedObj);
+                        let folderObj = await recursiveGetFolder(user.
+                            uploaded, _id);
+                        uploadedObj.folderPath = folderObj.folderPath + "/" 
+                            + name;
+                        updatedArray = await getUpdatedArray(user.uploaded, 
+                            _id, uploadedObj);
                     }
         
                     // Check if folder path is empty
@@ -255,38 +258,39 @@ http.listen(3000, async function () {
                     if (fileSystem.existsSync(uploadedObj.folderPath)) {
                         request.session.status = "error";
                         request.session.message = "Folder with the same name already exists.";
-                        return result.redirect("/MyUploads");
+                        result.redirect("/MyUploads");
+                        return false;
                     }
-        
-                    // Create the folder on the file system
-                    try {
-                        fileSystem.mkdirSync(uploadedObj.folderPath);
-                    } catch (error) {
-                        if (error.code !== 'EEXIST') {
-                            // Handle unexpected errors
-                            console.error("Error creating folder:", error);
-                            request.session.status = "error";
-                            request.session.message = "Error creating folder.";
-                            return result.redirect("/MyUploads");
-                        }
-                        // If 'EEXIST', the folder already exists, proceed as planned
-                    }
-        
+
+                    fileSystem.mkdirSync(uploadedObj.folderPath);
+    
                     // Update user's uploaded array based on the operation (create/update)
-                    if (_id === "") {
-                        await database.collection("users").updateOne({ "_id": userId }, {
-                            $push: { "uploaded": uploadedObj }
+                    if (_id == "") {
+                        await database.collection("users").updateOne({ 
+                            "_id": new ObjectId(request.session.user._id)
+                        }, {
+                            $push: {
+                                "uploaded": uploadedObj 
+                            }
                         });
                     } else {
-                        // Convert ObjectIds in the updatedArray
-                        updatedArray.forEach(item => item._id = new ObjectId(item._id));
+                         // Convert ObjectIds in the updatedArray
+                        for (let a = 0; a < updatedArray.length; a++) {
+                            updatedArray[a]._id = new ObjectId(updatedArray[a])._id;
+                        }
         
-                        await database.collection("users").updateOne({ "_id": userId }, {
-                            $set: { "uploaded": updatedArray }
+                        await database.collection("users").updateOne({
+                             "_id": new ObjectId(request.session.user._id)
+                        }, {
+                            $set: {
+                                "uploaded": updatedArray 
+                            }
                         });
         
                         // Redirect to the folder page after successful update
-                        return result.redirect("/MyUploads" + _id);
+                        result.redirect("/MyUploads" + _id);
+                        return false;
+                        
                     }
         
                     // Redirect to MyUploads page after folder creation
