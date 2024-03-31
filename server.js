@@ -96,13 +96,65 @@ function getUpdatedArray(arr, _id, uploadedObj) {
 
     return arr;
 }
-           
 
+// recrusive funktion för att ta bort filer och "återvänta" den uppdaterade array:en
+function removeFileReturnUpdated(arr, _id) {
+    for (var a = 0; a < arr.length; a++) {
+        if (arr[a].type != "folder" && arr[a]._id == _id) {
+            // ta bort filer från uploads folder
+            try {
+                fileSystem.unlinkSync(arr[a].filePath);
+            } catch (exp) {
+                //
+            }
+            // Ta bort fil från array
+            arr.splice(a, 1);
+            break;
+        }  
+        if (arr[a].type == "folder" && arr[a].files.length > 0) {
+            arr[a]._id = new ObjectId(arr[a]._id);
+            removeFileReturnUpdated(arr[a].files, _id);
+        }
+    }
+
+    return arr;
+}
+
+           
 http.listen(3000, async function () {
     console.log("Server started at " + mainURL);
         let client = await mongoClient.connect("mongodb+srv://feroroko:3KR1Qp9bYxjF5tGN@cluster0.cvkmmi9.mongodb.net/");
         let database = client.db("FileShare");
         console.log("Database connected");
+
+        app.post("/DeleteFile", async function (request, result) {
+            const _id = request.fields._id;
+
+            if (request.session.user) {
+                let user = await database.collection("users").findOne({
+                    "_id": new ObjectId(request.session.user._id)
+                });
+
+                let updatedArray = await removeFileReturnUpdated(user.uploaded, _id);
+                for (let a = 0; a < updatedArray.length; a++) {
+                    updatedArray[a]._id = new ObjectId(updatedArray[a]._id);
+                }
+
+                await database.collection("users").updateOne({
+                    "_id": new ObjectId(request.session.user._id)
+                }, {
+                    $set: {
+                        "uploaded": updatedArray
+                    }
+                });
+
+                const backURL = request.header('Referer') || '/';
+                result.redirect(backURL);
+                return false;
+            }
+
+            result.redirect("/Login");
+        });
 
         app.post("/UploadFile", async function (request, result) {
             if (request.session.user) {

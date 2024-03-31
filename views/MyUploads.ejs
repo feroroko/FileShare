@@ -29,67 +29,60 @@
         <div class="col-md-4">
             <a href="javascript:void(0)" class="btn btn-primary" onclick="selectFileForUpload();">Upload</a>
             <button type="button" class="btn btn-primary" onclick="onclickCreateFolder();">Create folder</button>
-        </div>          
-
-        <div class="row">
-            <% 
-            uploaded.forEach(function (singleFile) { 
-                
-                let fileSize = 0;
-                %>
-                    <div class="col-md-4" style="margin-top: 30px;">
-                        <div class="card">
-                            <div class="card-body" style="font-size: 100px; text-align: center; height: 300px;">
-                                <% if (singleFile.type == "folder") { %>
-                                    <i class="fa fa-folder-open-o"></i>
-                                <% } else { %>
-                                    <i class="fa fa-file"></i>
-                                <% } %>
-                            </div>
+        </div>
         
-                            <div class="card-footer">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <% if (singleFile.type == "folder") {
-                                            fileSize = getFolderSize(singleFile.files); 
-                                            fileSize = formatBytes(fileSize);
-                                        %>
-                                            <h3>
-                                                <a href="<%= request.mainURL + '/MyUploads/' + singleFile._id %>">
-                                                    <%= singleFile.folderName.substring(0, 10) %>
-                                                    <%= (singleFile.folderName.length > 10) ? "..." : "" %>
-                                                </a>
-                                            </h3>
-                                        <% } else {
-                                            fileSize = formatBytes(singleFile.size);
-                                        %>
-                                            <h3>
-                                                <a href="javascript:void(0);" 
-                                                onclick="viewFile(this);" 
-                                                data-id="<%= singleFile._id %>"
-                                                data-name="<%= singleFile.name %>"  
-                                                data-type="<%= singleFile.type %>"
-                                                data-created-at=" <%= singleFile.createdAt %>">
+        <div class="row">
+            <% uploaded.forEach(function (singleFile) { %>
+                <div class="col-md-4" style="margin-top: 30px;">
+                    <div class="card">
+                        <div class="card-body" style="font-size: 100px; text-align: center; height: 300px;">
+                            <% if (singleFile.type == "folder") { %>
+                                <i class="fa fa-folder-open-o"></i>
+                            <% } else { %>
+                                <i class="fa fa-file"></i>
+                            <% } %>
+                        </div>
+        
+                        <div class="card-footer">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <% if (singleFile.type == "folder") {
+                                        fileSize = getFolderSize(singleFile.files); 
+                                        fileSize = formatBytes(fileSize);
+                                    %>
+                                        <h3>
+                                            <a href="<%= request.mainURL + '/MyUploads/' + singleFile._id %>">
+                                                <%= singleFile.folderName.substring(0, 10) %>
+                                                <%= (singleFile.folderName.length > 10) ? "..." : "" %>
+                                            </a>
+                                        </h3>
+                                    <% } else {
+                                        fileSize = formatBytes(singleFile.size);
+                                    %>
+                                        <h3>
+                                            <a href="javascript:void(0);" 
+                                               onclick="viewFile(this);" 
+                                               data-id="<%= singleFile._id %>"
+                                               data-name="<%= singleFile.name %>"  
+                                               data-type="<%= singleFile.type %>"
+                                               data-created-at="<%= singleFile.createdAt %>">
                                                 <%= singleFile.name.substring(0, 10) %>
-
                                                 <%= (singleFile.name.length > 10) ? "..." : "" %>
                                             </a>
-                                            </h3>
-                                        <% } %>
-                                    </div>
-        
-                                    <div class="col-md-4">
-                                        <p style="position: relative; top: 10px;"><%= fileSize %>
-                                        </p>
-                                    </div>
+                                        </h3>
+                                    <% } %>
                                 </div>
         
+                                <div class="col-md-4">
+                                    <p style="position: relative; top: 10px;"><%= fileSize %></p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                <% }) %>
-              </div>
+                </div>
+            <% }) %>
         </div>
+    </div>
 
  
 <form method="post" action="<%= request.mainURL %>/CreateFolder" id="form-create-folder">
@@ -116,6 +109,14 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+
+                <form method="post" action="<%= request.mainURL %>/DeleteFile" id="form-delete-file">
+                    <input type="hidden" name="_id" required />
+
+                    <button type="button" class="btn btn-danger" onclick="confirmDeleteFile(this);">
+                        Delete
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -140,6 +141,8 @@
         modalBodyHtml += "<p> created at " + createdAt + "</p>";
         document.querySelector("#viewFileModal .modal-body").innerHTML = modalBodyHtml;
         $("#viewFileModal").modal("show");
+
+        document.getElementById("form-delete-file")._id.value = _id;
 
     }
 

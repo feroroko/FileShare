@@ -2,5 +2,26 @@
 <script src="<%= request.mainURL %>/public/js/popper.min.js"></script>
 <script src="<%= request.mainURL %>/public/js/bootstrap.min.js"></script>
 <script src="<%= request.mainURL %>/public/js/sweetalert2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+
+<script>
+    function confirmDeleteFile() {
+        Swal.fire({
+            title: "Are you sure?",
+            text: "Once deleted, you will not be able to recover this file!!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            confirmButtonText: "Delete",
+            cancelButtonText: "Cancel"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById("form-delete-file").submit();
+            }
+        });
+    }
+</script>
+
+
 </body>
 </html>
