@@ -45,6 +45,9 @@ body {
 
 }
 
+.btn-info {
+    color: white;
+}
 
 h1 {
     font-family: 'Qwitcher Grypen';

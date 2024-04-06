@@ -53,6 +53,9 @@ let nodemailerObject = {
 
 let fileSystem = require("fs");
 
+let rimraf = require("rimraf");
+const { data } = require("jquery");
+
 // recursive function to get the forlder from uploaded
 function recursiveGetFolder (files, _id) {
     let singleFile = null;
@@ -78,7 +81,7 @@ function recursiveGetFolder (files, _id) {
     }
 }
 
-// funcion för att lägga till en ny uppladdad objecjt och exportera den uppdaderade array:en
+// function för att lägga till en ny uppladdad objecjt och exportera den uppdaderade array:en
 function getUpdatedArray(arr, _id, uploadedObj) {
     for (let a = 0; a < arr.length; a++) {
         if (arr[a].type === "folder") {
@@ -120,12 +123,290 @@ function removeFileReturnUpdated(arr, _id) {
     return arr;
 }
 
+// recursive funktion för att ta bort mappar  och uppdatera array)
+function removeFolderReturnUpdated(arr, _id) {
+    for (let a = 0; a < arr.length; a++) {
+        if (arr[a].type == "folder") {
+            if (arr[a]._id == _id) {
+                // Ta bort mappen och alla underkataloger i den!
+                rimraf(arr[a].folderPath, function (err) {
+                    if (err) {
+                        console.error("Error removing directory:", err);
+                    } else {
+                        console.log("Directory removed successfully");
+                    }
+                });
+                arr.splice(a, 1);
+                break;
+            }
+
+            if (arr[a].files.length > 0) {
+                arr[a]._id = new ObjectId(arr[a]._id);
+                removeFolderReturnUpdated(arr[a].files, _id);
+            }
+        }
+    }
+
+    return arr;
+}
+
+// recutsive funktion för att få filer från "uploaded"
+function recursiveGetFile (files, _id) {
+    let singleFile = null;
+
+    for (let a = 0; a < files.length; a++)  {
+        const file = files[a];
+
+        // återvänta ifall fil typen inte är en mapp och ID är hittad
+        if (file.type != "folder") {
+            if (file._id == _id) {
+                return file;
+            }
+        }
+
+        // om det är en mapp och har filer, genomför recursion
+        if (file.type == "folder" && file.files.length > 0) {
+            singleFile = recursiveGetFile(file.files, _id);
+            // return filen om hittad i en mapp som är i en annan mapp
+            if (singleFile != null) {
+                return singleFile;
+            }
+        }
+    }
+
+}
+
+
            
 http.listen(3000, async function () {
     console.log("Server started at " + mainURL);
         let client = await mongoClient.connect("mongodb+srv://feroroko:3KR1Qp9bYxjF5tGN@cluster0.cvkmmi9.mongodb.net/");
         let database = client.db("FileShare");
         console.log("Database connected");
+
+        // Visa användare som filer har delats med
+        app.post("/GetFileSharedWith", async function (request, result) {
+            const _id = request.fields._id;
+        
+            // Check if _id is a valid ObjectId
+            if (!ObjectId.isValid(_id)) {
+                return result.json({
+                    "status": "error",
+                    "message": "Invalid ObjectId format."
+                });
+            }
+        
+            if (request.session.user) {
+                try {
+                    // Check if request.session.user._id is a valid ObjectId
+                    if (!ObjectId.isValid(request.session.user._id)) {
+                        return result.json({
+                            "status": "error",
+                            "message": "Invalid ObjectId format for session user ID."
+                        });
+                    }
+        
+                    const tempUsers = await database.collection("users").find({
+                        $and: [{
+                            "sharedWithMe.file._id": new ObjectId(_id)
+                        }, {
+                            "sharedWithMe.sharedBy._id": new ObjectId(request.session.user._id)
+                        }]
+                    }).toArray();
+        
+                    let users = [];
+                    for (let a = 0; a < tempUsers.length; a++) {
+                        let sharedObj = null;
+                        for (let b = 0; b < tempUsers[a].sharedWithMe.length; b++) {
+                            if (tempUsers[a].sharedWithMe[b].file._id.equals(_id)) {
+                                sharedObj = {
+                                    "_id": tempUsers[a].sharedWithMe[b]._id,
+                                    "sharedAt": tempUsers[a].sharedWithMe[b].createdAt,
+                                };
+                            }
+                        }
+                        users.push({
+                            "_id": tempUsers[a]._id,
+                            "name": tempUsers[a].name,
+                            "email": tempUsers[a].email,
+                            "sharedObj": sharedObj
+                        });
+                    }
+        
+                    if (users.length > 0) {
+                        return result.json({
+                            "status": "success",
+                            "message": "Record has been fetched.",
+                            "users": users
+                        });
+                    } else {
+                        return result.json({
+                            "status": "error",
+                            "message": "No records found for the provided ID."
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error fetching shared users:", error);
+                    return result.json({
+                        "status": "error",
+                        "message": "An error occurred while fetching shared users."
+                    });
+                }
+            } else {
+                return result.json({
+                    "status": "error",
+                    "message": "Please login to perform this action."
+                });
+            }
+        });
+
+        // dela filerna med en annan användare
+        app.post("/Share", async function (request, result) {
+            const _id = request.fields._id;
+            const type = request.fields.type;
+            const email = request.fields.email;
+        
+            if (request.session.user) {
+                let user = await database.collection("users").findOne({
+                    "email": email
+                });
+        
+                if (user === null) {
+                    request.session.status = "error";
+                    request.session.message = "User " + email + " does not exist.";
+                    result.redirect("/MyUploads");
+                    return false;
+                }
+        
+                if (!user.isVerified) {
+                    request.session.status = "error";
+                    request.session.message = "User " + user.name + " account is not verified.";
+                    result.redirect("/MyUploads");
+                    return false;
+                }
+        
+                let me = await database.collection("users").findOne({
+                    "_id": new ObjectId(request.session.user._id)
+                });
+        
+                let file = null;
+                if (type == "folder") {
+                    file = await recursiveGetFolder(me.uploaded, _id);
+                } else {
+                    file = await recursiveGetFile(me.uploaded, _id);
+                }
+        
+                if (file === null) {
+                    request.session.status = "error";
+                    request.session.message = "File does not exist.";
+                    result.redirect("/MyUploads");
+                    return false;
+                }
+                file._id = new ObjectId(file._id);
+        
+                const sharedBy = me;
+        
+                await database.collection("users").findOneAndUpdate({
+                    "_id": user._id
+                }, {
+                    $push: {
+                        "sharedWithMe": {
+                            "_id": new ObjectId(),
+                            "file": file,
+                            "sharedBy": {
+                                "_id": new ObjectId(sharedBy._id),
+                                "name": sharedBy.name,
+                                "email": sharedBy.email
+                            },
+                            "createdAt": new Date().getTime()
+                        }
+                    }
+                });
+        
+                request.session.status = "success";
+                request.session.message = "File has been shared with " + user.name + ".";
+        
+                const backURL = request.header("Referer") || "/";
+                result.redirect(backURL);
+            } else {
+                result.redirect("/Login");
+            }
+        });
+
+        // Användare bäkreftelse
+        app.post("/GetUser", async function (request, result) {
+            const email = request.fields.email;
+
+            if (request.session.user) {
+                let user = await database.collection("users").findOne({
+                    "email": email
+                });
+
+                if (user == null) {
+                    result.json({
+                        "status": "error",
+                        "message": "User" + email + " does not exist."
+                    });
+                    return false;
+                }
+
+                if (!user.isVerified) {
+                    result.json({
+                        "status": "error",
+                        "message": "user " + user.name + "account is not verified."
+                    });
+                    return false;
+                }
+
+                result.json({
+                    "status": "success",
+                    "message": "Data has been fetched",
+                    "user": {
+                        "_id": user._id,
+                        "name": user.name,
+                        "email": user.email
+                    }
+                });
+                return false;
+
+            }
+
+            result.json({
+                "status": "error",
+                "message": "please login to perform this action."
+            });
+            return false;
+        });
+
+        app.post("/DeleteDirectory", async function (request, result) {
+            const _id = request.fields._id;
+        
+            if (request.session.user) { 
+                
+                let user = await database.collection("users").findOne({
+                    "_id": new ObjectId(request.session.user._id)
+                });
+        
+                let updatedArray = await removeFolderReturnUpdated(user.uploaded, _id); 
+                for (let a = 0; a < updatedArray.length; a++) {
+                    updatedArray[a]._id = new ObjectId(updatedArray[a]._id);
+                }
+        
+                await database.collection("users").updateOne({
+                    "_id": new ObjectId(request.session.user._id)
+                }, {
+                    $set: {
+                        "uploaded": updatedArray
+                    }
+                });
+        
+                const backURL = request.header('Referer') || '/';
+                result.redirect(backURL);
+                return false;
+            }
+        
+            result.redirect("Login");
+        });
 
         app.post("/DeleteFile", async function (request, result) {
             const _id = request.fields._id;
@@ -155,7 +436,7 @@ http.listen(3000, async function () {
 
             result.redirect("/Login");
         });
-
+        
         app.post("/UploadFile", async function (request, result) {
             if (request.session.user) {
                 try {
