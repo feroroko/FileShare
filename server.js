@@ -17,7 +17,7 @@ app.use("/public/js", express.static(__dirname + "/public/js"));
 app.use("/public/fontawesome-4.7", express.static(__dirname + "/public/fontawesome-4.7"));
 app.use("/public/images", express.static(__dirname + "/public/images"));
 
-let session = require("express-session");
+const session = require("express-session");
 app.use(session({
     secret: "secret key",
     resave: false,
@@ -165,15 +165,20 @@ function recursiveGetFile (files, _id) {
         }
 
         // om det är en mapp och har filer, genomför recursion
+        if (file.type != "folder") {
+            if (file._id == _id) {
+                return file;
+            }
+        }
+
         if (file.type == "folder" && file.files.length > 0) {
             singleFile = recursiveGetFile(file.files, _id);
-            // return filen om hittad i en mapp som är i en annan mapp
+
             if (singleFile != null) {
                 return singleFile;
             }
         }
     }
-
 }
 
 
@@ -184,84 +189,59 @@ http.listen(3000, async function () {
         let database = client.db("FileShare");
         console.log("Database connected");
 
-        // Visa användare som filer har delats med
         app.post("/GetFileSharedWith", async function (request, result) {
             const _id = request.fields._id;
-        
-            // Check if _id is a valid ObjectId
-            if (!ObjectId.isValid(_id)) {
-                return result.json({
-                    "status": "error",
-                    "message": "Invalid ObjectId format."
-                });
-            }
-        
-            if (request.session.user) {
-                try {
-                    // Check if request.session.user._id is a valid ObjectId
-                    if (!ObjectId.isValid(request.session.user._id)) {
-                        return result.json({
-                            "status": "error",
-                            "message": "Invalid ObjectId format for session user ID."
-                        });
-                    }
-        
-                    const tempUsers = await database.collection("users").find({
-                        $and: [{
-                            "sharedWithMe.file._id": new ObjectId(_id)
-                        }, {
-                            "sharedWithMe.sharedBy._id": new ObjectId(request.session.user._id)
-                        }]
-                    }).toArray();
-        
-                    let users = [];
-                    for (let a = 0; a < tempUsers.length; a++) {
-                        let sharedObj = null;
-                        for (let b = 0; b < tempUsers[a].sharedWithMe.length; b++) {
-                            if (tempUsers[a].sharedWithMe[b].file._id.equals(_id)) {
-                                sharedObj = {
-                                    "_id": tempUsers[a].sharedWithMe[b]._id,
-                                    "sharedAt": tempUsers[a].sharedWithMe[b].createdAt,
-                                };
-                            }
+
+                if (request.session.user) {
+                    const tempUsers = await database.collection("users").
+                    find({
+                    $and: [{
+                        "sharedWithMe.file._id": new ObjectId(_id)
+                    }, {
+                        "sharedWithMe.sharedBy._id": new ObjectId(request.session.user._id)
+                    }]
+
+                }).toArray();
+
+                let users = [];
+                for (let a = 0; a < tempUsers.length; a++) {
+                    let sharedObj = null;
+                    for (let b = 0; b < tempUsers[a].sharedWithMe.length
+                        ; b++) {
+                        if (tempUsers[a].sharedWithMe[b].file._id == _id
+                        ) {
+                            sharedObj = {
+                                "_id": tempUsers[a].sharedWithMe[b]._id,
+                                "sharedAt": tempUsers[a].sharedWithMe[b]
+                                    .createdAt,
+                            };
                         }
-                        users.push({
-                            "_id": tempUsers[a]._id,
-                            "name": tempUsers[a].name,
-                            "email": tempUsers[a].email,
-                            "sharedObj": sharedObj
-                        });
                     }
-        
-                    if (users.length > 0) {
-                        return result.json({
-                            "status": "success",
-                            "message": "Record has been fetched.",
-                            "users": users
-                        });
-                    } else {
-                        return result.json({
-                            "status": "error",
-                            "message": "No records found for the provided ID."
-                        });
-                    }
-                } catch (error) {
-                    console.error("Error fetching shared users:", error);
-                    return result.json({
-                        "status": "error",
-                        "message": "An error occurred while fetching shared users."
+                    users.push({
+                        "_id": tempUsers[a]._id,
+                        "name": tempUsers[a].name,
+                        "email": tempUsers[a].email,
+                        "sharedObj": sharedObj
                     });
                 }
-            } else {
-                return result.json({
-                    "status": "error",
-                    "message": "Please login to perform this action."
-                });
-            }
-        });
 
-        // dela filerna med en annan användare
-        app.post("/Share", async function (request, result) {
+                result.json({
+                    "status": "success",
+                    "message": "record has been getched",
+                    "users": users
+                });
+                return false;
+            }
+
+            result.json({
+                "status": "error",
+                "message": "Please login to perform this action."
+            });
+        });
+    
+
+         // dela filerna med en annan användare
+         app.post("/Share", async function (request, result) {
             const _id = request.fields._id;
             const type = request.fields.type;
             const email = request.fields.email;
@@ -271,18 +251,19 @@ http.listen(3000, async function () {
                     "email": email
                 });
         
-                if (user === null) {
+                if (user == null) {
                     request.session.status = "error";
-                    request.session.message = "User " + email + " does not exist.";
+                    request.session.message = "User " + email + " does not exist. ";
                     result.redirect("/MyUploads");
                     return false;
                 }
         
                 if (!user.isVerified) {
+                    console.log("User object:", user); // Log the user object for debugging
                     request.session.status = "error";
-                    request.session.message = "User " + user.name + " account is not verified.";
+                    request.session.message = "User " + user.name + " account is not verified";
                     result.redirect("/MyUploads");
-                    return false;
+                    return; // Exit the function to prevent further execution
                 }
         
                 let me = await database.collection("users").findOne({
@@ -296,11 +277,11 @@ http.listen(3000, async function () {
                     file = await recursiveGetFile(me.uploaded, _id);
                 }
         
-                if (file === null) {
+                if (file == null) {
                     request.session.status = "error";
                     request.session.message = "File does not exist.";
                     result.redirect("/MyUploads");
-                    return false;
+                    return; // Exit the function to prevent further execution
                 }
                 file._id = new ObjectId(file._id);
         
@@ -325,39 +306,40 @@ http.listen(3000, async function () {
         
                 request.session.status = "success";
                 request.session.message = "File has been shared with " + user.name + ".";
+                console.log("Session Message:", request.session.message); // Log session message
         
                 const backURL = request.header("Referer") || "/";
                 result.redirect(backURL);
             } else {
-                result.redirect("/Login");
+                result.redirect("/Login"); // Moved into the else block
             }
         });
 
-        // Användare bäkreftelse
+        // get user for confirmation
         app.post("/GetUser", async function (request, result) {
             const email = request.fields.email;
-
+        
             if (request.session.user) {
                 let user = await database.collection("users").findOne({
                     "email": email
                 });
-
+        
                 if (user == null) {
                     result.json({
                         "status": "error",
-                        "message": "User" + email + " does not exist."
+                        "message": "User " + email + " does not exist"
                     });
                     return false;
                 }
-
+        
                 if (!user.isVerified) {
                     result.json({
                         "status": "error",
-                        "message": "user " + user.name + "account is not verified."
+                        "message": "User " + user.name + " account is not verified."
                     });
                     return false;
                 }
-
+        
                 result.json({
                     "status": "success",
                     "message": "Data has been fetched",
@@ -368,12 +350,11 @@ http.listen(3000, async function () {
                     }
                 });
                 return false;
-
             }
-
+        
             result.json({
                 "status": "error",
-                "message": "please login to perform this action."
+                "message": "Please login to perform this action"
             });
             return false;
         });
@@ -668,7 +649,7 @@ http.listen(3000, async function () {
                             request.message = "Folder not found.";
                             return result.render("MyUploads", {
                                 "request": request,
-                                "uploaded": [],
+                                "uploaded": Array.isArray(uploaded) ? uploaded : [],
                                 "_id": _id,
                                 "folderName": folderName,
                                 "createdAt": createdAt
