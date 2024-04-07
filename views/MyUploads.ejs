@@ -177,8 +177,7 @@
             </div>
             
             <div class="modal-body"> 
-                <form method="post" action="<%= request.mainURL %>/Share
-                    " id="form-share-modal">
+                <form method="post" action="<%= request.mainURL %>/Share" id="form-share-modal">
                     <input type="hidden" name="_id" required />
                     <input type="hidden" name="type" required />
 
@@ -221,7 +220,7 @@
             </div>
 
             <div class="modal-body">
-                <p class="Loading"></p>
+                <p class="loading"></p>
                 <h3 class="filename"></h3>
 
                 <table class="table">
@@ -252,7 +251,7 @@
     const _id = self.getAttribute("data-id");
     $("#sharedWithModal").modal("show");
 
-    const loadingElement = document.querySelector("#sharedWithModal .modal-body .loading");
+    const loadingElement = document.querySelector("#sharedWithModal .modal-body .Loading");
     if (loadingElement) {
         loadingElement.innerHTML = "Loading...";
     }
@@ -265,7 +264,7 @@
             if (this.status == 400) {
                 let data = JSON.parse(this.responseText);
 
-                const loadingElement = document.querySelector("#sharedWithModal .modal-body .loading");
+                const loadingElement = document.querySelector("#sharedWithModal .modal-body .Loading");
                 if (loadingElement) {
                     loadingElement.innerHTML = "";
                 }
@@ -353,8 +352,6 @@
         function showDropdownMenu() {
         $("#dropdown-menu").toggleClass("show");
     }
-
-
 
     function viewFile(self) {
         let _id = self.getAttribute("data-id");

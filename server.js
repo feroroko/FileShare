@@ -52,7 +52,6 @@ let nodemailerObject = {
 };
 
 let fileSystem = require("fs");
-
 let rimraf = require("rimraf");
 const { data } = require("jquery");
 
@@ -227,7 +226,7 @@ http.listen(3000, async function () {
 
                 result.json({
                     "status": "success",
-                    "message": "record has been getched",
+                    "message": "record has been fetched",
                     "users": users
                 });
                 return false;
@@ -253,7 +252,7 @@ http.listen(3000, async function () {
         
                 if (user == null) {
                     request.session.status = "error";
-                    request.session.message = "User " + email + " does not exist. ";
+                    request.session.message = "User " + email + " does not exist.";
                     result.redirect("/MyUploads");
                     return false;
                 }
@@ -261,7 +260,7 @@ http.listen(3000, async function () {
                 if (!user.isVerified) {
                     console.log("User object:", user); // Log the user object for debugging
                     request.session.status = "error";
-                    request.session.message = "User " + user.name + " account is not verified";
+                    request.session.message = "User account is not verified";
                     result.redirect("/MyUploads");
                     return; // Exit the function to prevent further execution
                 }
@@ -317,47 +316,47 @@ http.listen(3000, async function () {
 
         // get user for confirmation
         app.post("/GetUser", async function (request, result) {
-            const email = request.fields.email;
-        
-            if (request.session.user) {
-                let user = await database.collection("users").findOne({
-                    "email": email
-                });
-        
-                if (user == null) {
-                    result.json({
-                        "status": "error",
-                        "message": "User " + email + " does not exist"
-                    });
-                    return false;
-                }
-        
-                if (!user.isVerified) {
-                    result.json({
-                        "status": "error",
-                        "message": "User " + user.name + " account is not verified."
-                    });
-                    return false;
-                }
-        
+        const email = request.fields.email;
+
+        if (request.session.user) {
+            let user = await database.collection("users").findOne({
+                "email": email
+            });
+
+            if (user == null) {
                 result.json({
-                    "status": "success",
-                    "message": "Data has been fetched",
-                    "user": {
-                        "_id": user._id,
-                        "name": user.name,
-                        "email": user.email
-                    }
+                    "status": "error",
+                    "message": "User " + email + " does not exist."
                 });
                 return false;
             }
-        
+
+            if (!user.isVerified) {
+                result.json({
+                    "status": "error",
+                    "message": "User account is not verified."
+                });
+                return false;
+            }
+
             result.json({
-                "status": "error",
-                "message": "Please login to perform this action"
+                "status": "success",
+                "message": "Data has been fetched",
+                "user": {
+                    "_id": user._id,
+                    "name": user.name,
+                    "email": user.email
+                }
             });
             return false;
+        }
+
+        result.json({
+            "status": "error",
+            "message": "Please login to perform this action."
         });
+        return false;
+    });
 
         app.post("/DeleteDirectory", async function (request, result) {
             const _id = request.fields._id;
