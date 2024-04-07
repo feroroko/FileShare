@@ -180,6 +180,32 @@ function recursiveGetFile (files, _id) {
     }
 }
 
+// recurive function to get shared folder
+function recursiveGetSharedFolder (files, _id) {
+    let singleFile = null;
+
+    for (let a = 0; a < files.length; a++) {
+        let file = (typeof files[a].file === "undefined") ? files[a] :
+        files[a].file;
+
+        // return if file type is folder and ID is found
+        if (file.type == "folder") {
+            if (file._id ==_id) {
+                return file;
+            }
+
+            // if it has filesm then do recursion
+            if (file.files.length > 0) {
+                singleFile = recursiveGetFolder(file.files, _id);
+                // return the file if found in sub-folder
+                if (singleFile != null) {
+                    return singleFile;
+                }
+            }
+        }
+    }
+}
+
 
            
 http.listen(3000, async function () {
@@ -187,6 +213,98 @@ http.listen(3000, async function () {
         let client = await mongoClient.connect("mongodb+srv://feroroko:3KR1Qp9bYxjF5tGN@cluster0.cvkmmi9.mongodb.net/");
         let database = client.db("FileShare");
         console.log("Database connected");
+
+        app.get("/SharedWithMe/:_id?", async function (request, result) {
+            const _id = request.params._id;
+        
+            if (request.session.user) {
+                try {
+                    let user = await database.collection("users").findOne({
+                        "_id": new ObjectId(request.session.user._id)
+                    });
+        
+                    let files = null;
+                    let folderName = "";
+        
+                    if (typeof _id === "undefined") {
+                        files = user.sharedWithMe;
+                    } else {
+                        let folderObj = await recursiveGetFolder(user.sharedWithMe, _id);
+        
+                        if (folderObj == null) {
+                            request.session.status = "error";
+                            request.session.message = "Folder not found.";
+                            result.redirect("/Error");
+                            return;
+                        }
+        
+                        files = folderObj.files;
+                        folderName = folderObj.folderName;
+                    }
+        
+                    if (files == null) {
+                        request.session.status = "error";
+                        request.session.message = "Directory not found";
+                        result.redirect("/Error");
+                        return;
+                    }
+        
+                    result.render("SharedWithMe", {
+                        "request": request,
+                        "files": files, // Passing the files data to the template
+                        "folderName": folderName // Passing the folderName data to the template
+                    });
+                } catch (error) {
+                    console.error("Error:", error);
+                    request.session.status = "error";
+                    request.session.message = "An unexpected error occurred";
+                    result.redirect("/Error");
+                }
+            } else {
+                result.redirect("/Login");
+            }
+        });
+        
+        app.post("/RemoveSharedAccess", async function (request, result){
+            const _id = request.fields._id;
+
+            if (request.session.user) {
+                const user = await database.collection("users").findOne({
+                    $and: [{
+                        "sharedWithMe_id": new ObjectId(_id)
+                    }, {
+                        "sharedWithme.sharedBy._id": new ObjectId(request.session.user._id)
+                    }]
+                });
+
+                // ta bort från array
+                for (let a = 0; a < user.sharedWithMe.length; a++) {
+                    if (user.sharedWithMe[a]._id == _id) {
+                        user.sharedWithMe.splice(a, 1);
+                    }
+                }
+
+                await database.collection("users").findOneAndUpdate({
+                    $and: [{
+                        "sharedWithMe._id": new ObjectId(_id)
+                    },{
+                        "sharedWithMe.sharedBy._id": new ObjectId(request.session._id)
+                    }]
+                }, {
+                    $set: {
+                        "sharedWithMe": user.sharedWithMe
+                    }
+                });
+
+                request.session.status = "success"
+                request.session.message = "Shared access has been removed";
+
+                const backURL = request.header('Referer') || '/';
+                result.redirect(backURL);
+                return false;
+            }
+            result.redirect("/Login");
+        });
 
         app.post("/GetFileSharedWith", async function (request, result) {
             const _id = request.fields._id;
@@ -254,15 +372,14 @@ http.listen(3000, async function () {
                     request.session.status = "error";
                     request.session.message = "User " + email + " does not exist.";
                     result.redirect("/MyUploads");
-                    return false;
+                    return;
                 }
         
                 if (!user.isVerified) {
-                    console.log("User object:", user); // Log the user object for debugging
                     request.session.status = "error";
                     request.session.message = "User account is not verified";
                     result.redirect("/MyUploads");
-                    return; // Exit the function to prevent further execution
+                    return;
                 }
         
                 let me = await database.collection("users").findOne({
@@ -280,7 +397,7 @@ http.listen(3000, async function () {
                     request.session.status = "error";
                     request.session.message = "File does not exist.";
                     result.redirect("/MyUploads");
-                    return; // Exit the function to prevent further execution
+                    return;
                 }
                 file._id = new ObjectId(file._id);
         
@@ -307,13 +424,13 @@ http.listen(3000, async function () {
                 request.session.message = "File has been shared with " + user.name + ".";
                 console.log("Session Message:", request.session.message); // Log session message
         
-                const backURL = request.header("Referer") || "/";
+                const backURL = request.header('Referer') || "/";
                 result.redirect(backURL);
             } else {
-                result.redirect("/Login"); // Moved into the else block
+                result.redirect("/Login");
             }
         });
-
+        
         // get user for confirmation
         app.post("/GetUser", async function (request, result) {
         const email = request.fields.email;
