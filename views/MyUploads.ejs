@@ -51,17 +51,16 @@
                             </button>
                         </li>
 
-                        <li>
-                            <button type="button" class="btn btn-info btn-block" onclick="showSharedWithModal(this);"
-                            data-dismiss="modal" data-id="<%= _id %>"> 
-                                Shared With
-                            </button>
-                        </li>
+                            <li>
+                                <button type="button" class="btn btn-info btn-block" onclick="showSharedWithModal(this);" data-dismiss="modal" data-id="<%= _id %>"> 
+                                    Shared With
+                                </button>
+                            </li>
         
                         <li>
                             <form method="post"
                                   action="<%= request.mainURL %>/DeleteDirectory"
-                                  onsubmit="return confirm('Are you sure you want to remove this shared access?');">
+                                  onsubmit="return confirm('Are you sure you want to delete this folder and all files inside?');">
                                 <input type="hidden" name="_id" value="<%= _id %>" required /> 
                                 <button type="submit" class="btn btn-danger btn-block">Delete</button>
                             </form>
@@ -154,6 +153,14 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 
+                <button type="button" class="btn btn-primary" onclick="showShareModal(this);"
+                    data-dismiss="modal"
+                    data-id=""
+                    data-type=""
+                    id="button-share-file">
+                    Share
+                </button>
+
                 <form method="post" action="<%= request.mainURL %>/DeleteFile" id="form-delete-file">
                     <input type="hidden" name="_id" required />
 
@@ -198,31 +205,29 @@
             </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"data-dismiss="
+                    <button type="button" class="btn btn-default"data-dismiss="
                     modal">Close
                     </button>
 
-                <input type="submit" class="btn btn-primary" value="Share" form="form-share-modal"/>
+                <input type="submit" class="btn btn-primary" value="Share" form="form-share-modal" />
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="sharedWithModal">
-    <div class="modal-dialog modal-lg">
+<div id="sharedWithModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="sharedWithModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg"> 
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">Shared With</h4>
-                <button type="button" class="close" data-dismiss="modal"
-                aria-label="Close">
-                    <span aria-hidden="true">X</span>
+                <h5 class="modal-title" id="sharedWithModalLabel">Shared With</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
                 </button>
             </div>
 
             <div class="modal-body">
                 <p class="loading"></p>
                 <h3 class="filename"></h3>
-
                 <table class="table">
                     <thead>
                         <tr>
@@ -232,71 +237,107 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
+                    <tbody></tbody> 
                 </table>
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn btn-default"
-                data-dismiss="modal">
-                    Close
-                </button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 
+
+
 <script>
 
-    function showSharedWithModal(self) {
-    const _id = self.getAttribute("data-id");
-    $("#sharedWithModal").modal("show");
+      function showSharedWithModal(self) {
+        const _id = self.getAttribute("data-id");
+        $("#sharedWithModal").modal("show");
 
-    const loadingElement = document.querySelector("#sharedWithModal .modal-body .Loading");
-    if (loadingElement) {
-        loadingElement.innerHTML = "Loading...";
+        let ajax = new XMLHttpRequest();
+        ajax.open("post", document.getElementById("base-url").value + "/GetFileSharedWith", true);
+
+        ajax.onreadystatechange = function () {
+            if (this.readyState == 4) {
+                if (this.status == 200) { // Check for 200 status
+                    let data = JSON.parse(this.responseText);
+
+                    if (data.status == "error") {
+                        Swal.fire("Error", data.message, "error");
+                    }
+
+                    if (data.status == "success") {
+                        console.log("Shared Users:", data.users); // Log the data.users array
+                        let html = "";
+                        for (let a = 0; a < data.users.length; a++) {
+                            const user = data.users[a];
+
+                            let sharedAt = user.sharedObj.sharedAt;
+                            sharedAt = new Date(sharedAt);
+                            sharedAt = sharedAt.getDate() + " " + months[sharedAt.getMonth()] + ", " + sharedAt.getFullYear() + "<br />" + sharedAt.getHours() + ":" + sharedAt.getMinutes() + ":" + sharedAt.getSeconds();
+
+                            html += `<tr>
+                                <td>` + user.name + `</td>
+                                <td>` + user.email + `</td>
+                                <td>` + sharedAt + `</td>
+                                <td>
+                                    <form method="post" action="` + document.getElementById("base-url").value + `/RemoveSharedAccess" onsubmit="return confirm('Are you sure you want to remove this shared access?');">
+                                        <input type="hidden" name="_id" value="` + user.sharedObj._id + `" />
+                                        <input type="submit" class="btn btn-danger" value="Remove access" />
+                                    </form>
+                                </td>
+                            </tr>`;
+                        }
+                        let modalBody = document.querySelector("#sharedWithModal .modal-body table tbody");
+                        if (modalBody) {
+                            modalBody.innerHTML = html;
+                        } else {
+                            console.error("Modal body table tbody not found.");
+                        }
+                    }
+                } else {
+                    console.error("Request failed with status:", this.status);
+                }
+            }
+        };
+
+        ajax.onerror = function () {
+            console.error("An error occurred during the request.");
+        };
+
+        let formData = new FormData();
+        formData.append("_id", _id);
+        ajax.send(formData);
     }
 
+
+    function searchUserForShare(self) {
+    self.innerHTML = "Loading...";
+    self.setAttribute("disabled", "disabled");
+
     let ajax = new XMLHttpRequest();
-    ajax.open("post", document.getElementById("base-url").value + "/GetFileSharedWith", true);
+    ajax.open("post", document.getElementById("base-url").value + "/GetUser", true);
 
     ajax.onreadystatechange = function () {
         if (this.readyState == 4) {
-            if (this.status == 400) {
+            if (this.status == 200) {
                 let data = JSON.parse(this.responseText);
 
-                const loadingElement = document.querySelector("#sharedWithModal .modal-body .Loading");
-                if (loadingElement) {
-                    loadingElement.innerHTML = "";
-                }
+                self.removeAttribute("disabled");
+                self.innerHTML = "Confirm user";
 
                 if (data.status == "error") {
                     Swal.fire("Error", data.message, "error");
+                } else if (data.status == "success") {
+                    let html = "<p>Name: " + data.user.name + "</p>";
+                    document.getElementById("user-details-for-share").innerHTML = html;
+
+                    // Display success message
+                    Swal.fire("Success", data.message, "success");
                 }
-
-                if (data.status == "success") {
-                    let html = "";
-                    for (let a = 0; a < data.users.length; a++) {
-                        const user = data.users[a];
-
-                        let sharedAt = user.sharedObj.sharedAt;
-                        sharedAt = new Date(sharedAt);
-                        sharedAt = sharedAt.getDate() + " " + months[sharedAt.getMonth()] + ", " + sharedAt.getFullYear() + "<br />" + sharedAt.getHours() + ":" + sharedAt.getMinutes() + ":" + sharedAt.getSeconds();
-
-                        html += `<tr>
-                            <td>` + user.name + `</td>
-                            <td>` + user.email + `</td>
-                            <td>` + sharedAt + `</td>
-                            <td>
-                                <form method="post" action="` + document.getElementById("base-url").value + `/RemoveSharedAccess" onsubmit="return confirm('Are you sure you want to remove this shared access?');">
-                                    <input type="hidden" name="_id" value="` + user.sharedObj._id + `" />
-                                    <input type="submit" class="btn btn-danger" value="Remove access" />
-                                </form>
-                            </td>
-                        </tr>`;
-                    }
-                    document.querySelector("#sharedWithModal .modal-body table tbody").innerHTML = html;
-                }
-            }
+            } 
 
             if (this.status == 500) {
                 console.log(this.responseText);
@@ -304,40 +345,10 @@
         }
     };
 
-    let formData = new FormData();
-    formData.append("_id", _id);
-    ajax.send(formData);
-}
-
-    function searchUserForShare(self) {
-        self.innerHTML = "Loading...";
-        self.setAttribute("disabled", "disabled");
-
-        let ajax = new XMLHttpRequest();
-        ajax.open("post", document.getElementById("base-url").value + "/GetUser", true);
-
-        ajax.onreadystatechange = function () {
-            if (this.readyState == 4) {
-                if (this.status == 200) {
-                    let data = JSON.parse(this.responseText);
-
-                    self.removeAttribute("disabled");
-                    self.innerHTML = "Confirm user";
-
-                    if (data.status == "error") {
-                        Swal.fire("Error", data.message, "error");
-                    } else if (data.status == "success") {
-                        let html = "<p>Name: " + data.user.name + "</p>";
-                        document.getElementById("user-details-for-share").innerHTML = html;
-                    } else {
-                        // Handle unexpected response
-                    }
-                } else {
-                    // Handle non-200 status codes
-                    console.log("Error: " + this.status);
-                }
-            }
-        };
+    ajax.onerror = function () {
+        // Handle any errors that occur during the AJAX request
+        Swal.fire("Error", "An error occurred while processing your request", "error");
+    };
 
         let form = document.getElementById("form-share-modal");
         let formData = new FormData(form);
@@ -373,6 +384,8 @@
 
         document.getElementById("form-delete-file")._id.value = _id;
 
+        document.getElementById("button-share-file").setAttribute("data-id", _id);
+        document.getElementById("button-shared-file").setAttribute("data-type");
     }
 
     function confirmUpload() {

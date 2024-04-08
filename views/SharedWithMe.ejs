@@ -19,9 +19,28 @@
         </div>
 
         <div class="col-md-4">
-            <!-- More buttons go here -->
+            <% if (_id != null) { %>
+                <div class="dropdown" style="display: initial;">
+                    <button type="button"
+                            data-toggle="dropdown"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                            class="btn btn-primary" >
+                        More
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <form method="post" action="<%= request.mainURL %>/DeleteSharedDirectory"
+                                onsubmit="return confirm('Are you sure you want to delete this folder and all the files in it?');">
+                                <input type="hidden" name="_id" value="<%= _id %>">
+                                <input type="submit" value="Delete" class="btn btn-danger btn-block" />
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            <% } %>
         </div>
-    </div>
 
     <div class="row">
         <% files.forEach(function(file) { 
@@ -49,42 +68,93 @@
                 <div class="card-footer">
                     <div class="row">
                         <div class="col-md-8">
-                            <% if (singleFile.type == "folder") {
-                                fileSize = getFolderSize(singleFile.files);
-                                fileSize = formatBytes(fileSize);
-                                %>
+                            <% if (singleFile.type == "folder") { %>
+                                <% const folderSize = getFolderSize(singleFile.files); %>
                                 <h3>
                                     <a href="<%= request.mainURL + '/SharedWithMe/' + singleFile._id %>">
                                         <%= singleFile.folderName.substring(0, 10) %>
-                                        <%= (singleFile.folderName.length > 10) ? "..." : "" %>
+                                        <%= singleFile.folderName.length > 10 ? "..." : "" %>
                                     </a>
                                 </h3>
-                                <% } else {
-                                    fileSize = formatBytes(singleFile.size);
-                                %>
+                                <p><%= formatBytes(folderSize) %></p>
+                            <% } else { %>
                                 <h3>
                                     <a href="javascript:void(0);" onclick="viewFile(this);"
                                         data-id="<%= singleFile._id %>"
                                         data-name="<%= singleFile.name %>"
                                         data-type="<%= singleFile.type %>"
-                                        data-created-at="<%= singleFile.createdAt %> ">
+                                        data-created-at="<%= singleFile.createdAt %>">
                                         <%= singleFile.name.substring(0, 10) %>
-                                        <%= (singleFile.name.length > 10) ? "..." : "" %>
+                                        <%= singleFile.name.length > 10 ? "..." : "" %>
                                     </a>
                                 </h3>
-                                <% } %>
-                        </div>
-
-                        <div class="col-md-4">
-                            <p style="position: relative; top: 10px;"><%= fileSize %></p>
+                                <p><%= formatBytes(singleFile.size) %></p>
+                            <% } %>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
         <% }) %>
     </div>
-</div>
+
+    <div class="modal fade" id="viewFileModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">X</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    
+                </div>
+                
+                <div  class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    
+                    <form method="post" action="<%= request.mainURL %>/DeleteSharedFile"
+                        id="form-delete-file">
+                        <input type="hidden" name="_id" required />
+                        
+                        <button type="button" class="btn btn-danger"
+                        onclick="confirmDeleteFile(this);">
+                        Delete
+                    </button>    
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        function viewFile(self) {
+        let _id = self.getAttribute("data-id");
+        let name = self.getAttribute("data-name");
+        let type = self.getAttribute("data-type");
+        let createdAt = self.getAttribute("data-created-at");
+        
+        // Ensure `months` array is defined somewhere in your code
+        // let months = ["Jan", "Feb", ..., "Dec"];
+
+        createdAt = parseFloat(createdAt);
+        createdAt = new Date(createdAt);
+        createdAt = createdAt.getDate() + " " + months[createdAt.getMonth()] + ", " + createdAt.getFullYear() + " " + 
+        createdAt.getHours() + ":" + createdAt.getMinutes() + ":" + createdAt.getSeconds();
+
+        document.querySelector("#viewFileModal .modal-title").innerHTML = name;
+
+        let modalBodyHtml = "<p> Created at " + createdAt + "</p>";
+        document.querySelector("#viewFileModal .modal-body").innerHTML = modalBodyHtml;
+
+        // Correct way to set the value of _id
+        document.getElementById("form-delete-file").querySelector('[name="_id"]').value = _id;
+
+        $("#viewFileModal").modal("show");
+    }
+        
+</script>
+
 
 <%- include ("includes/footer") %>
