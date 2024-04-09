@@ -51,6 +51,17 @@
                             </button>
                         </li>
 
+                        <li>
+                            <button type="button" class="btn btn-primary btn-block" onclick="renameFolder(this);"
+                                data-dismiss="modal"
+                                data-id="<%= _id %>"
+                                data-name="<%= folderName %>">
+                                Rename
+                           </button>
+                        </li>
+
+                        </li>
+
                             <li>
                                 <button type="button" class="btn btn-info btn-block" onclick="showSharedWithModal(this);" data-dismiss="modal" data-id="<%= _id %>"> 
                                     Shared With
@@ -153,6 +164,14 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 
+                <button type="button" class="btn btn-warning" onclick="renameFile(this);"
+                    data-dismiss="modal"
+                    data-id=""
+                    data-name=""
+                    id="button-rename-file">
+                    Rename
+                </button>
+
                 <button type="button" class="btn btn-primary" onclick="showShareModal(this);"
                     data-dismiss="modal"
                     data-id=""
@@ -248,9 +267,43 @@
     </div>
 </div>
 
+<form method="post" action="<%= request.mainURL %>/RenameFolder" id="form-rename-folder">
+    <input type="hidden" name="_id" required />
+    <input type="hidden" name="name" required/>
+</form>
 
+<form method="post" action="<%= request.mainURL %>/RenameFile" id="form-rename-file">
+    <input type="hidden" name="_id" required />
+    <input type="hidden" name="name" required />
+</form>
 
 <script>
+    
+    function renameFile(self) {
+        const _id = self.getAttribute("data-id");
+        const name = self.getAttribute("data-name");
+
+        let newName = prompt("Enter new name", name);
+        if (newName != null) {
+            document.getElementById("form-rename-file")._id.value = _id;
+            document.getElementById("form-rename-file").name.value = newName;
+
+            document.getElementById("form-rename-file").submit();
+        }
+    }
+
+    function renameFolder(self) {
+        const _id = self.getAttribute("data-id");
+        const name = self.getAttribute("data-name");
+
+        let newName = prompt("Enter new name", name);
+        if (newName != null) {
+            document.getElementById("form-rename-folder")._id.value = _id;
+            document.getElementById("form-rename-folder").name.value = newName;
+
+            document.getElementById("form-rename-folder").submit();
+        }
+    }
 
       function showSharedWithModal(self) {
         const _id = self.getAttribute("data-id");
@@ -379,13 +432,18 @@
 
         let modalBodyHtml = "";
         modalBodyHtml += "<p> created at " + createdAt + "</p>";
+        modalBodyHtml += "<button type='button' class='btn btn-success' onclick='downloadFile(this);' data-id='"+ _id + "'>Download</button>";
+            
         document.querySelector("#viewFileModal .modal-body").innerHTML = modalBodyHtml;
         $("#viewFileModal").modal("show");
 
         document.getElementById("form-delete-file")._id.value = _id;
 
         document.getElementById("button-share-file").setAttribute("data-id", _id);
-        document.getElementById("button-shared-file").setAttribute("data-type");
+        document.getElementById("button-share-file").setAttribute("data-type", type);
+
+        document.getElementById("button-rename-file").setAttribute("data-id", _id);
+        document.getElementById("button-rename-file").setAttribute("data-name", name);
     }
 
     function confirmUpload() {

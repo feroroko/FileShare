@@ -1,3 +1,121 @@
 <%- include ("includes/header") %>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
+
+<style>
+    /* Example CSS styles */
+    
+    /* Example CSS styles */
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f8f9fa;
+        width: 100%;
+    }
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    .header {
+        background-color: #007bff;
+        color: #fff;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .navbar a {
+        color: #fff;
+        text-decoration: none;
+        margin: 0 10px;
+        padding: 5px 10px;
+        border-radius: 5px;
+    }
+
+    .hero-section {
+        background-image: url('/public/css/pictures/teamwork.png');
+        max-width: 800px;
+        margin: 0px auto;
+        padding: 20px;
+        background-color: #97cef8;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        background-size: cover;
+        background-position: center;
+        
+    }
+
+    .hero-content {
+        max-width: 600px;
+    }
+    .feature-section {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 50px;
+       
+    }
+    .feature-box {
+        background-color: #a9f9f1;
+        padding: 20px;
+        /* Flex property adjusted to control width */
+        flex: 0 1 calc(30.33% - 20px); /* Adjust width here */
+        margin: 0 10px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        
+    }
+    .feature-box h2 {
+        font-size: 1.5em;
+        margin-bottom: 10px;
+    }
+    .feature-box p {
+        font-size: 1em;
+        line-height: 1.6;
+        font-family: "Merriweather", serif;
+    }
+
+    .h1 {
+        width: 100%;
+    }
+    
+    .footer {
+        background-color: #303030;
+        color: #fff;
+        padding: 5px;
+        text-align: center;
+        margin-top: 420px;
+        width: 100%;
+        height: 33px;
+        background-color: #303030;
+        color: #fff;
+        padding: 5px;
+        text-align: center;
+        margin-bottom: 51; /* Push footer to bottom */
+    }
+
+    .hero-content {
+        width: 100%;
+        text-align: center;
+    }
+</style>
+
+
 <%- include ("includes/footer") %>
+
+<div class="container welcome-container">
+    <h1>Welcome to FileShare</h1>
+</div>
+
+
+<footer class="footer">
+<p>&copy; 2024 FileShare. All rights reserved.</p>
+</footer>
+
+<!-- Bootstrap JS dependencies (optional if you need dropdowns, modals, etc.) -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

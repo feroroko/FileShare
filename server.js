@@ -243,12 +243,254 @@ function removeSharedFileReturnUpdated(arr, _id) {
     }
     return arr;
 }
+
+// recursive function to get the shared file
+function recursiveGetSharedFile(files, _id) {
+    let singleFile = null;
+
+    for (let a = 0; a < files.length; a++) {
+        let file = (typeof files[a].file === "undefined") ? files[a] : files[a].file;
+
+        // Return if file type is not folder and ID is found
+        if (file.type !== "folder") {
+            if (file._id === _id) {
+                return file;
+            }
+        }
+
+        // If it is a folder and has files, then do the recursion
+        if (file.type === "folder" && file.files.length > 0) {
+            singleFile = recursiveGetSharedFile(file.files, _id);
+            // Return file if found in sub-folders
+            if (singleFile !== null) {
+                return singleFile;
+            }
+        }
+    }
+}
+
+// Recursive function to rename sub-folders
+function renameSubFolders(arr, oldName, newName) {
+    for (let a = 0; a < arr.length; a++) {
+        let pathParts = (arr[a].type == "folder") ? arr[a].folderPath.split("/") : arr[a].filePath.split("/");
+
+        let newPath = "";
+        for (let b = 0; b < pathParts.length; b++) {
+            if (pathParts[b] == oldName) {
+                pathParts[b] = newName;
+            }
+            newPath += pathParts[b];
+            if (b < pathParts.length - 1) {
+                newPath += "/";
+            }
+        }
+
+        if (arr[a].type == "folder") {
+            arr[a].folderPath = newPath;
+            if (arr[a].files.length > 0) {
+                renameSubFolders(arr[a].files, oldName, newName);
+            }
+        } else {
+            arr[a].filePath = newPath;
+        }
+    }
+}
+
+// Recursive function to rename folders and update array
+function renameFolderReturnUpdated(arr, _id, newName) {
+    for (let a = 0; a < arr.length; a++) {
+        if (arr[a].type == "folder") {
+            if (arr[a]._id == _id) {
+                const oldFolderName = arr[a].folderName;
+                let folderPathParts = arr[a].folderPath.split("/");
+
+                let newFolderPath = "";
+                for (let b = 0; b < folderPathParts.length; b++) {
+                    if (folderPathParts[b] == oldFolderName) {
+                        folderPathParts[b] = newName;
+                    }
+                    newFolderPath += folderPathParts[b];
+                    if (b < folderPathParts.length - 1) {
+                        newFolderPath += "/";
+                    }
+                }
+                // Rename the folder
+                fileSystem.rename(arr[a].folderPath, newFolderPath, function (error) {
+                    if (error) {
+                        console.error("Error renaming folder:", error);
+                    }
+                });
+
+                arr[a].folderName = newName;
+                arr[a].folderPath = newFolderPath;
+
+                renameSubFolders(arr[a].files, oldFolderName, newName);
+                break;
+            } else if (arr[a].files.length > 0) {
+                renameFolderReturnUpdated(arr[a].files, _id, newName);
+            }
+        }
+    }
+    return arr;
+}
+
+// Recursive function to rename files and update array
+function renameFileReturnUpdated(arr, _id, newName) {
+    for (let a = 0; a < arr.length; a++) {
+        if (arr[a].type != "folder") {
+            if (arr[a]._id == _id) {
+                const oldFileName = arr[a].name;
+                let filePathParts = arr[a].filePath.split("/");
+
+                let newFilePath = "";
+                for (let b = 0; b < filePathParts.length; b++) {
+                    if (filePathParts[b] == oldFileName) {
+                        filePathParts[b] = newName;
+                    }
+                    newFilePath += filePathParts[b];
+                    if (b < filePathParts.length - 1) {
+                        newFilePath += "/";
+                    }
+                }
+                // Rename the file
+                fileSystem.rename(arr[a].filePath, newFilePath, function (error) {
+                    if (error) {
+                        console.error("Error renaming file:", error);
+                    }
+                });
+
+                arr[a].name = newName;
+                arr[a].filePath = newFilePath;
+                break;
+            }
+        }
+
+        // Do recursion if folder has sub-folders
+        if (arr[a].type == "folder" && arr[a].files.length > 0) {
+            renameFileReturnUpdated(arr[a].files, _id, newName); 
+        }
+    }
+    return arr;
+}
            
 http.listen(3000, async function () {
     console.log("Server started at " + mainURL);
         let client = await mongoClient.connect("mongodb+srv://feroroko:3KR1Qp9bYxjF5tGN@cluster0.cvkmmi9.mongodb.net/");
         let database = client.db("FileShare");
         console.log("Database connected");
+
+        // ändra namn på filer
+        app.post("/RenameFile", async function (request, result) {
+            const _id = request.fields._id;
+            const name = request.fields.name;
+
+            if (request.session.user) {
+                
+                let user = await database.collection("users").findOne({
+                    "_id": new ObjectId(request.session.user._id)
+                });
+
+                let updatedArray = await renameFileReturnUpdated(user.uploaded, _id, name);
+                for (let a = 0; a < updatedArray.length; a++) {
+                    updatedArray[a]._id = new ObjectId(updatedArray[a]._id);
+                }
+
+                await database.collection("users").updateOne({
+                    "_id": new ObjectId(request.session.user._id)
+                }, {
+                    $set: {
+                        "uploaded": updatedArray
+                    }
+                });
+
+                const backURL = request.header('Referer') || '/' 
+                result.redirect(backURL);
+                return false;
+            }
+
+            result.redirect("/Login");
+        })
+
+        // rename folder
+        app.post("/RenameFolder", async function (request, result) {
+            const _id = request.fields._id;
+            const name = request.fields.name;
+
+            if (request.session.user) {
+                
+                let user = await database.collection("users").findOne({
+                    "_id": new ObjectId(request.session.user._id)
+                });
+
+                let updatedArray = await renameFolderReturnUpdated(user.uploaded, _id, name);
+                for (let a = 0; a < updatedArray.length; a++) {
+                    updatedArray[a]._id = new ObjectId(updatedArray[a]._id);
+                }
+
+                await database.collection("users").updateOne({
+                    "_id": new ObjectId(request.session.user._id)
+                }, {
+                    $set: {
+                        "uploaded": updatedArray
+                    }
+                });
+
+                const backURL = request.header('Referer') || '/' 
+                result.redirect(backURL);
+                return false;
+            }
+
+            result.redirect("/Login");
+        })
+        
+        // ladda ner fil
+        app.post("/DownloadFile", async function(request, result) {
+            const _id = request.fields._id;
+
+            if (request.session.user) {
+                
+                let user = await database.collection("users").findOne({
+                    "_id": new ObjectId(request.session.user._id)
+                });
+
+                let fileUploaded = await recursiveGetFile(user.uploaded, _id);
+                let fileShared = await recursiveGetSharedFile(user.sharedWithMe, _id);
+
+                if (fileUploaded == null && fileShared == null) {
+                    result.json({
+                        "status": "error",
+                        "message": "File is nither uploaded nor shared with you."
+                    });
+                    return false;
+                } 
+
+                let file = (fileUploaded == null) ? fileShared : fileUploaded;
+
+                fileSystem.readFile(file.filePath, function (error, data) {
+                    if (error) {
+                        result.json({
+                            "status": "error",
+                            "message": "Error reading the file."
+                        });
+                    } else {
+                        result.json({
+                            "status": "success",
+                            "message": "Data has been fetched.",
+                            "arrayBuffer": data,
+                            "fileType": file.type,
+                            "fileName": file.name
+                        });
+                    }
+                });
+                return false;
+            }
+
+            result.json({
+                "status": "error",
+                "message": "please login to perform this action. "
+            });
+            return false;
+        });
 
         app.post("/DeleteSharedFile", async function(request, result) {
             const _id = request.fields._id;

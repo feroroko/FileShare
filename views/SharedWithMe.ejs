@@ -135,9 +135,6 @@
         let type = self.getAttribute("data-type");
         let createdAt = self.getAttribute("data-created-at");
         
-        // Ensure `months` array is defined somewhere in your code
-        // let months = ["Jan", "Feb", ..., "Dec"];
-
         createdAt = parseFloat(createdAt);
         createdAt = new Date(createdAt);
         createdAt = createdAt.getDate() + " " + months[createdAt.getMonth()] + ", " + createdAt.getFullYear() + " " + 
@@ -146,6 +143,10 @@
         document.querySelector("#viewFileModal .modal-title").innerHTML = name;
 
         let modalBodyHtml = "<p> Created at " + createdAt + "</p>";
+
+        modalBodyHtml += "<button type='button' class='btn btn-success' onclick='downloadFile(this);' data-id='" + _id + "'>Download</button>";
+
+
         document.querySelector("#viewFileModal .modal-body").innerHTML = modalBodyHtml;
 
         // Correct way to set the value of _id
