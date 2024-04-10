@@ -8,7 +8,6 @@ let mainURL = "http://localhost:3000";
 let mongodb = require("mongodb");
 let mongoClient = mongodb.MongoClient;
 const { ObjectId } = require('mongodb');
-const rimraf = require('rimraf');
 
 
 app.set("view engine", "ejs");
@@ -54,6 +53,7 @@ let nodemailerObject = {
 
 let fileSystem = require("fs");
 const { data } = require("jquery");
+let rimraf = require("rimraf")
 
 // recursive function to get the forlder from uploaded
 function recursiveGetFolder (files, _id) {
@@ -128,20 +128,16 @@ function removeFolderReturnUpdated(arr, _id) {
         if (arr[a].type == "folder") {
             if (arr[a]._id == _id) {
                 // Remove the folder and all its subfolders
-                rimraf(arr[a].folderPath, function (err) {
-                    if (err) {
-                        console.error("Error removing directory:", err);
-                    } else {
-                        console.log("Directory removed successfully");
-                    }
+                rimraf(arr[a].folderPath, function () {
+                    console.log("done")
                 });
                 arr.splice(a, 1);
-                break; // Exit loop after removal
+                break; 
             }
 
             // Recursively process subfolders
             if (arr[a].files.length > 0) {
-                arr[a]._id = new ObjectId(arr[a]._id); // Ensure _id is ObjectId
+                arr[a]._id = new ObjectId(arr[a]._id); 
                 removeFolderReturnUpdated(arr[a].files, _id);
             }
         }
@@ -823,12 +819,11 @@ http.listen(3000, async function () {
         });
     
 
-        // Define the '/DeleteDirectory' route
         app.post("/DeleteDirectory", async function (request, result) {
         const _id = request.fields._id;
 
         if (request.session.user) { 
-            try {
+           
                 let user = await database.collection("users").findOne({
                     "_id": new ObjectId(request.session.user._id)
                 });
@@ -848,13 +843,9 @@ http.listen(3000, async function () {
 
                 const backURL = request.header('Referer') || '/';
                 result.redirect(backURL);
-                } catch (error) {
-                    console.error("Error:", error);
-                    result.redirect("/Error");
-                }
-            } else {
-                result.redirect("/Login");
-            }
+                return false;     
+            } 
+            result.redirect("/Login")
         });    
 
         app.post("/DeleteFile", async function (request, result) {
