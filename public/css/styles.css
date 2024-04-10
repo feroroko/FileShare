@@ -5,6 +5,7 @@
 body {
     min-height: 100vh;
     background: linear-gradient(#2b1055, #7597de);
+  
 }
 
 .gb-light {
@@ -21,23 +22,21 @@ body {
     font-size: medium;
 }
 
+.folderName {
+    font-size: 100px;
+}
+
 .nav-link {
     font-family: ' sans-serif', sans-serif;
-    font-size: 16px;
-    /* Justera storleken efter behov */
+    font-size: 12px;
     font-weight: normal;
-    /* eller bold om du vill ha fet text */
-    /* Eventuella andra stildirektiv, t.ex. färg eller linjehöjd */
     color: rgb(255, 255, 255);
 }
 
 .navbar-brand {
     font-family: 'Protest Riot';
     font-size: 35px;
-    /* Justera storleken efter behov */
     font-weight: normal;
-    /* eller bold om du vill ha fet text */
-    /* Eventuella andra stildirektiv, t.ex. färg eller linjehöjd */
     color: rgb(255, 255, 255);
     font-style: normal;
     font-weight: 400;
@@ -61,19 +60,29 @@ h1 {
 
 }
 
+.row {
+    display: flex;
+    
+}
 
+.form-group {
+    width: 300px;
+ 
+}
+
+.MyUploads {
+    font-size: 100px;
+}
 
 .col-md-12 {
-    margin: 50px;
+    margin: 30px;
     position: absolute;
-    top: 25%;
-    left: 37%;
+    left: 32%;
     display: flex;
     color: white;
 
 
 }
-
 
 #sharedWithModal .modal-body {
     max-height: 70vh; 
@@ -88,4 +97,88 @@ h1 {
 
 .form-group {
     margin-bottom: 15px;
+}
+
+
+.navbar-brand {
+    font-size: 25px;
+    
+}
+
+.navbar-brand,
+.navbar-nav .nav-link,
+.navbar-toggler-icon {
+    color: white !important;
+}
+
+.navbar .nav-link {
+    font-size: 17px; 
+    font-family: ' sans-serif', sans-serif;
+}
+
+.h1 {
+    font-size: 100px;
+}
+
+
+.SharedWithMe {
+    font-size: 85px; /* Adjust the font size as needed */
+}
+    
+
+@media (max-width: 768px) {
+    .body {
+        overflow-x: hidden;
+    }
+    .navbar-nav {
+        flex-direction: column;
+    }
+    .navbar-nav .nav-item {
+        margin-bottom: 10px;
+    }
+    .navbar-toggler {
+        margin-right: 10px;
+    }
+    .col-md-12 {
+        width: 100%;
+    }
+    .form-group {
+        width: 100%;
+        float: right;
+    }
+
+    .row {
+        display: flex;
+        flex-direction: row-reverse; 
+        width: 300px;
+    }
+
+    .custom-col {
+        width: 100%;
+    }
+
+    .navbar-toggler-icon {
+        color: #fff !important; /* White color */
+    }
+
+.col-md-12 {
+    margin: 50px;
+    position: absolute;
+    top: 25%;
+    left: 30%;
+    display: flex;
+    color: white;
+
+
+}
+
+.card-body {
+    width: 100%;
+}
+
+
+.MyUploads {
+    font-size: 50px;
+}
+
 }

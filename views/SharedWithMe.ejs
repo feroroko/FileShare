@@ -9,9 +9,9 @@
 
     <div class="row">
         <div class="col-md-8">
-            <h1>
+            <h1 class="SharedWithMe">
                 <% if (folderName == "") { %>
-                Shared with me
+                Shared with me!
                 <% } else { %>
                 <%= folderName %>
                 <% } %>
@@ -129,30 +129,26 @@
 
     <script>
 
-        function viewFile(self) {
+    function viewFile(self) {
         let _id = self.getAttribute("data-id");
         let name = self.getAttribute("data-name");
         let type = self.getAttribute("data-type");
         let createdAt = self.getAttribute("data-created-at");
         
-        createdAt = parseFloat(createdAt);
-        createdAt = new Date(createdAt);
-        createdAt = createdAt.getDate() + " " + months[createdAt.getMonth()] + ", " + createdAt.getFullYear() + " " + 
-        createdAt.getHours() + ":" + createdAt.getMinutes() + ":" + createdAt.getSeconds();
-
+        // Converted createdAt to a Date object
+        createdAt = new Date(parseFloat(createdAt));
+        let formattedCreatedAt = `${createdAt.getDate()} ${months[createdAt.getMonth()]}, ${createdAt.getFullYear()} ${createdAt.getHours()}:${createdAt.getMinutes()}:${createdAt.getSeconds()}`;
         document.querySelector("#viewFileModal .modal-title").innerHTML = name;
 
-        let modalBodyHtml = "<p> Created at " + createdAt + "</p>";
+        let modalBodyHtml = `<p>Created at ${formattedCreatedAt}</p>`;
+        modalBodyHtml += `<button type='button' class='btn btn-success' onclick='downloadFile(this);' data-id='${_id}'>Download</button>`;
+        
+        let modalBody = document.querySelector("#viewFileModal .modal-body");
+        modalBody.innerHTML = modalBodyHtml;
 
-        modalBodyHtml += "<button type='button' class='btn btn-success' onclick='downloadFile(this);' data-id='" + _id + "'>Download</button>";
-
-
-        document.querySelector("#viewFileModal .modal-body").innerHTML = modalBodyHtml;
-
-        // Correct way to set the value of _id
-        document.getElementById("form-delete-file").querySelector('[name="_id"]').value = _id;
 
         $("#viewFileModal").modal("show");
+        document.getElementById("form-delete-file")._id.value = _id;
     }
         
 </script>

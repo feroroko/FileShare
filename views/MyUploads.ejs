@@ -7,9 +7,9 @@
         <div class="col-md-4">
             <h1>
                 <% if (typeof folderName !== 'undefined' && folderName) { %>
-                    <h1><%= folderName %></h1>
+                    <h1 class="folderName"><%= folderName %></h1>
                 <% } else { %>
-                    <h1>My Uploads</h1>
+                    <h1 class="MyUploads">My Uploads</h1>
                 <% } %>
             </h1>
         </div>
@@ -34,12 +34,12 @@
                             aria-haspopup="true"
                             aria-expanded="false"
                             class="btn btn-primary" 
-                            onclick="showDropdownMenu()"> <!-- Add onclick event to show dropdown menu -->
+                            onclick="showDropdownMenu()"> 
                         More
                         <span class="caret"></span>
                     </button>
                     
-                    <ul class="dropdown-menu" id="dropdown-menu"> <!-- Add id attribute for the dropdown menu -->
+                    <ul class="dropdown-menu" id="dropdown-menu"> 
                         <li>
                             <button type="button"
                                     class="btn btn-primary btn-block"
@@ -425,19 +425,16 @@
         let createdAt = self.getAttribute("data-created-at");
         createdAt = parseFloat(createdAt);
         createdAt = new Date(createdAt);
-        createdAt = createdAt.getDate() + " " + months[createdAt.getMonth()] + ", " + createdAt.getFullYear() + " " + 
-        createdAt.getHours() + ":" + createdAt.getMinutes() + ":" + createdAt.getSeconds();
-
+        createdAt = createdAt.getDate() + " " + months[createdAt.getMonth()] + ", " + createdAt.getFullYear() + " " +  createdAt.getHours() + ":" + createdAt.getMinutes() + ":" + createdAt.getSeconds();
         document.querySelector("#viewFileModal .modal-title").innerHTML = name;
 
         let modalBodyHtml = "";
         modalBodyHtml += "<p> created at " + createdAt + "</p>";
-        modalBodyHtml += "<button type='button' class='btn btn-success' onclick='downloadFile(this);' data-id='"+ _id + "'>Download</button>";
-            
+        modalBodyHtml += "<button type='button' class='btn btn-success' onclick='downloadFile(this);' data-id='" + _id + "'>Download</button>";   
         document.querySelector("#viewFileModal .modal-body").innerHTML = modalBodyHtml;
         $("#viewFileModal").modal("show");
 
-        document.getElementById("form-delete-file")._id.value = _id;
+        document.getElementById("form-delete-file").querySelector('[name="_id"]').value = _id;
 
         document.getElementById("button-share-file").setAttribute("data-id", _id);
         document.getElementById("button-share-file").setAttribute("data-type", type);

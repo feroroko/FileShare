@@ -252,14 +252,14 @@ function recursiveGetSharedFile(files, _id) {
         let file = (typeof files[a].file === "undefined") ? files[a] : files[a].file;
 
         // Return if file type is not folder and ID is found
-        if (file.type !== "folder") {
-            if (file._id === _id) {
+        if (file.type != "folder") {
+            if (file._id == _id) {
                 return file;
             }
         }
 
         // If it is a folder and has files, then do the recursion
-        if (file.type === "folder" && file.files.length > 0) {
+        if (file.type == "folder" && file.files.length > 0) {
             singleFile = recursiveGetSharedFile(file.files, _id);
             // Return file if found in sub-folders
             if (singleFile !== null) {
@@ -444,52 +444,48 @@ http.listen(3000, async function () {
         })
         
         // ladda ner fil
-        app.post("/DownloadFile", async function(request, result) {
+        app.post("/DownloadFile", async function(request, response) {
             const _id = request.fields._id;
-
+        
             if (request.session.user) {
-                
                 let user = await database.collection("users").findOne({
                     "_id": new ObjectId(request.session.user._id)
                 });
-
+        
                 let fileUploaded = await recursiveGetFile(user.uploaded, _id);
                 let fileShared = await recursiveGetSharedFile(user.sharedWithMe, _id);
-
+        
                 if (fileUploaded == null && fileShared == null) {
-                    result.json({
+                    response.json({
                         "status": "error",
-                        "message": "File is nither uploaded nor shared with you."
+                        "message": "File is neither uploaded nor shared with you."
                     });
-                    return false;
+                    return;
                 } 
-
+        
                 let file = (fileUploaded == null) ? fileShared : fileUploaded;
-
+        
                 fileSystem.readFile(file.filePath, function (error, data) {
                     if (error) {
-                        result.json({
+                        response.json({
                             "status": "error",
                             "message": "Error reading the file."
                         });
                     } else {
-                        result.json({
-                            "status": "success",
-                            "message": "Data has been fetched.",
-                            "arrayBuffer": data,
-                            "fileType": file.type,
-                            "fileName": file.name
-                        });
+                        // Set content disposition and content type headers
+                        response.setHeader('Content-disposition', 'attachment; filename=' + file.name);
+                        response.setHeader('Content-type', 'application/octet-stream');
+        
+                        // Send the file data
+                        response.send(data);
                     }
                 });
-                return false;
+            } else {
+                response.status(401).json({
+                    "status": "error",
+                    "message": "Please login to perform this action."
+                });
             }
-
-            result.json({
-                "status": "error",
-                "message": "please login to perform this action. "
-            });
-            return false;
         });
 
         app.post("/DeleteSharedFile", async function(request, result) {
@@ -819,28 +815,29 @@ http.listen(3000, async function () {
             });
             return false;
         }
-
-        result.json({
-            "status": "error",
-            "message": "Please login to perform this action."
+            result.json({
+                "status": "error",
+                "message": "Please login to perform this action."
+            });
+            return false;
         });
-        return false;
-    });
-
-    app.post("/DeleteDirectory", async function (request, result) {
-        const _id = request.fields._id;
     
+
+        // Define the '/DeleteDirectory' route
+        app.post("/DeleteDirectory", async function (request, result) {
+        const _id = request.fields._id;
+
         if (request.session.user) { 
             try {
                 let user = await database.collection("users").findOne({
                     "_id": new ObjectId(request.session.user._id)
                 });
-    
+
                 let updatedArray = await removeFolderReturnUpdated(user.uploaded, _id); 
                 for (let a = 0; a < updatedArray.length; a++) {
                     updatedArray[a]._id = new ObjectId(updatedArray[a]._id);
                 }
-    
+
                 await database.collection("users").updateOne({
                     "_id": new ObjectId(request.session.user._id)
                 }, {
@@ -848,9 +845,9 @@ http.listen(3000, async function () {
                         "uploaded": updatedArray
                     }
                 });
-    
-                    const backURL = request.header('Referer') || '/';
-                    result.redirect(backURL);
+
+                const backURL = request.header('Referer') || '/';
+                result.redirect(backURL);
                 } catch (error) {
                     console.error("Error:", error);
                     result.redirect("/Error");
@@ -1196,7 +1193,7 @@ http.listen(3000, async function () {
                     let text = "Please verify your account by clicking the following link: " +
                         mainURL + "/verifyEmail/" + email + "/" + verification_token;
         
-                    let html = "Please verify your account by clicking the following link: <br><br> <a href='" + mainURL + "/verifyEmail/" + email + "/" + verification_token + "'>Confirm Email</a> < br><br> Thank you.";
+                    let html = "Please verify your account by clicking the following link:<br> <a href='" + mainURL + "/verifyEmail/" + email + "/" + verification_token + "'>Confirm Email</a> < br><br> Thank you.";
         
                     if (email) {
                         let info = await transporter.sendMail({
@@ -1210,7 +1207,7 @@ http.listen(3000, async function () {
                         console.log("Email sent: " + info.response);
 
                         request.status = "Success"
-                        request.message = "Signed up successfully. An email has been sent to verify your account. Once verified, you can log in and start using ShareFile."
+                        request.message = "Signed up successfully. An email has been sent to verify your account. Once verified, you can log in and start using FileShare."
 
                         result.render("Register", {
                             "request": request
